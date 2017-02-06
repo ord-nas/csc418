@@ -771,6 +771,33 @@ void updateBoid(int i)
  // 10 <= r_rule3 <= 100
  // 0 <= k_rule3 <= 1
  ///////////////////////////////////////////
+  float V3[3] = {0.0, 0.0, 0.0};
+  num_nearby_boids = 0;
+  // First sum up all of the velocities of nearby boids
+  for (int j = 0; j < nBoids; ++j) {
+    // Calculate the distance between boid j and boid i
+    float dx = Boid_Location[j][0] - Boid_Location[i][0];
+    float dy = Boid_Location[j][1] - Boid_Location[i][1];
+    float dz = Boid_Location[j][2] - Boid_Location[i][2];
+    float distance = sqrt(dx*dx + dy*dy + dz*dz);
+    if (distance <= r_rule3) {
+      // If boid j is close enough to boid i, then add boid j's velocity to the
+      // accumulated total V3.
+      V3[0] += Boid_Velocity[j][0];
+      V3[1] += Boid_Velocity[j][1];
+      V3[2] += Boid_Velocity[j][2];
+      ++num_nearby_boids;
+    }
+  }
+  // Divide the accumulation by the number of nearby boids to get the average
+  // velocity
+  V3[0] /= num_nearby_boids;
+  V3[1] /= num_nearby_boids;
+  V3[2] /= num_nearby_boids;
+  // Finally update the boid's velocity
+  Boid_Velocity[i][0] += k_rule3 * V3[0];
+  Boid_Velocity[i][1] += k_rule3 * V3[1];
+  Boid_Velocity[i][2] += k_rule3 * V3[2];  
 
  ///////////////////////////////////////////
  // Enforcing bounds on motion
