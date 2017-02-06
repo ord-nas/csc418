@@ -610,7 +610,7 @@ void updateBoid(int i)
 
  ///////////////////////////////////////////
  //
- // TO DO:
+ // TO DO: (Done)
  //
  // Boid update Rule 1:
  //  Move boids toward the common center of
@@ -645,6 +645,38 @@ void updateBoid(int i)
  //  10 <= r_rule1 <= 100
  //  0 <= k_rule1 <= 1
  ///////////////////////////////////////////
+  float V1[3] = {0.0, 0.0, 0.0};
+  int num_nearby_boids = 0;
+  // First sum up all of the positions of nearby boids
+  for (int j = 0; j < nBoids; ++j) {
+    // Calculate the distance between boid j and boid i
+    float dx = Boid_Location[j][0] - Boid_Location[i][0];
+    float dy = Boid_Location[j][1] - Boid_Location[i][1];
+    float dz = Boid_Location[j][2] - Boid_Location[i][2];
+    float distance = sqrt(dx*dx + dy*dy + dz*dz);
+    if (distance <= r_rule1) {
+      // If boid j is close enough to boid i, then add boid j's position to the
+      // accumulated total V1.
+      V1[0] += Boid_Location[j][0];
+      V1[1] += Boid_Location[j][1];
+      V1[2] += Boid_Location[j][2];
+      ++num_nearby_boids;
+    }
+  }
+  // Divide the accumulation by the number of nearby boids to get the average
+  // position, i.e. centre of mass.
+  V1[0] /= num_nearby_boids;
+  V1[1] /= num_nearby_boids;
+  V1[2] /= num_nearby_boids;
+  // Now subtract out the position of boid i to get a vector pointing from the
+  // current boid to the centre of mass.
+  V1[0] -= Boid_Location[i][0];
+  V1[1] -= Boid_Location[i][1];
+  V1[2] -= Boid_Location[i][2];
+  // Finally update the boid's velocity
+  Boid_Velocity[i][0] += k_rule1 * V1[0];
+  Boid_Velocity[i][1] += k_rule1 * V1[1];
+  Boid_Velocity[i][2] += k_rule1 * V1[2];  
 
  ///////////////////////////////////////////
  // QUESTION:
@@ -682,7 +714,26 @@ void updateBoid(int i)
  //  1 <= r_rule2 <= 15
  //  0 <= k_rule2 <= 1
  ///////////////////////////////////////////
-
+  float V2[3] = {0.0, 0.0, 0.0};
+  // First find all of the nearby boids
+  for (int j = 0; j < nBoids; ++j) {
+    // Calculate the distance between boid j and boid i
+    float dx = Boid_Location[j][0] - Boid_Location[i][0];
+    float dy = Boid_Location[j][1] - Boid_Location[i][1];
+    float dz = Boid_Location[j][2] - Boid_Location[i][2];
+    float distance = sqrt(dx*dx + dy*dy + dz*dz);
+    if (distance <= r_rule2) {
+      // If boid j is close enough to boid i, then calculate a vector from i to
+      // j and add that to V2.
+      V2[0] += dx;
+      V2[1] += dy;
+      V2[2] += dz;
+    }
+  }
+  // Finally update the boid's velocity
+  Boid_Velocity[i][0] -= k_rule2 * V2[0];
+  Boid_Velocity[i][1] -= k_rule2 * V2[1];
+  Boid_Velocity[i][2] -= k_rule2 * V2[2];  
 
 
  ///////////////////////////////////////////
@@ -831,6 +882,9 @@ void updateBoid(int i)
  // Finally (phew!) update the position
  // of this boid.
  ///////////////////////////////////////////
+ Boid_Location[i][0] += Boid_Velocity[i][0];
+ Boid_Location[i][1] += Boid_Velocity[i][1];
+ Boid_Location[i][2] += Boid_Velocity[i][2];
 
  ///////////////////////////////////////////
  // CRUNCHY:
