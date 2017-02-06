@@ -323,7 +323,7 @@ void setupUI()
     ////////////////////////////////////////
 
     ///////////////////////////////////////////////////////////
-    // TO DO:
+    // TO DO: (Done)
     //   Add controls to change the values of the variables
     //   used in the updateBoid() function. This includes
     //
@@ -345,13 +345,14 @@ void setupUI()
 
     ImGui::SetWindowFocus();
         ImGui::ColorEdit3("clear color", (float*)&clear_color);
-//    EXAMPLE control for r_rule1
-//    Controller name ---|
-//                       v
-    ImGui::SliderFloat(      "r_rule1",         &r_rule1, 10.0f, 100.0f);
-//          Text to show --------|                 |       |       |
-//          Variable whose value will be changed --|       |-------|
-//          Min/Max values available ----------------------|-------|
+    ImGui::SliderFloat("rotation", &global_rot, 0.0f, 1.0f);
+    ImGui::SliderFloat("k_rule0", &k_rule0, 0.0f, 1.0f);
+    ImGui::SliderFloat("r_rule1", &r_rule1, 10.0f, 100.0f);
+    ImGui::SliderFloat("k_rule1", &k_rule1, 0.0f, 1.0f);
+    ImGui::SliderFloat("r_rule2", &r_rule2, 1.0f, 15.0f);
+    ImGui::SliderFloat("k_rule2", &k_rule2, 0.0f, 1.0f);
+    ImGui::SliderFloat("r_rule3", &r_rule3, 10.0f, 100.0f);
+    ImGui::SliderFloat("k_rule3", &k_rule3, 0.0f, 1.0f);
 
     // Add "Quit" button
     if(ImGui::Button("Quit")) {
