@@ -590,6 +590,10 @@ void updateBoid(int i)
  // Add at the top of this function any variables
  // needed.
  ///////////////////////////////////////////
+  float previous_velocity[3];
+  previous_velocity[0] = Boid_Velocity[i][0];
+  previous_velocity[1] = Boid_Velocity[i][1];
+  previous_velocity[2] = Boid_Velocity[i][2];
 
  ///////////////////////////////////////////
  // LEARNING OBJECTIVES: This part of the assignment
@@ -697,7 +701,7 @@ void updateBoid(int i)
 
  ///////////////////////////////////////////
  //
- // TO DO:
+ // TO DO: (Done)
  //
  // Boid update Rule 2:
  //  Boids steer to avoid collision.
@@ -746,7 +750,7 @@ void updateBoid(int i)
 
  ///////////////////////////////////////////
  //
- // TO DO:
+ // TO DO: (Done)
  //
  // Boid update Rule 3:
  //  Boids try to match speed with neighbours
@@ -904,6 +908,9 @@ void updateBoid(int i)
  // Vaid ranges:
  //   0 < k_rule0 < 1
  ///////////////////////////////////////////
+ Boid_Velocity[i][0] += k_rule0 * previous_velocity[0];
+ Boid_Velocity[i][1] += k_rule0 * previous_velocity[1];
+ Boid_Velocity[i][2] += k_rule0 * previous_velocity[2];
 
  ///////////////////////////////////////////
  // QUESTION: Why add inertia at the end and
@@ -912,7 +919,7 @@ void updateBoid(int i)
 
  ///////////////////////////////////////////
  //
- // TO DO:
+ // TO DO: (Done)
  //
  // Finally (phew!) update the position
  // of this boid.
