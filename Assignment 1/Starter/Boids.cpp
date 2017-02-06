@@ -65,6 +65,8 @@ Written by: F. Estrada, Jun 2011.
             Updated, Sep. 2016
 ***********************************************************/
 
+#include <iostream>
+
 /*
   Headers for 3DS management - model loading for point clouds
 */
@@ -273,6 +275,12 @@ void initGlut(char* winName)
 
 void MouseClick(int button, int state, int x, int y) {
     ImGui_ImplGlut_MouseButtonCallback(button, state, x, y);
+    // if (ImGui::IsMouseHoveringAnyWindow()) {
+    //   std::cout << "ON WINDOW" << std::endl;
+    // } else {
+    //   std::cout << "OFF WINDOW" << std::endl;
+    //   std::cout << state << std::endl;
+    // }
 }
 void MotionFunc(int x, int y) {
     ImGui_ImplGlut_MotionCallback(x, y);
