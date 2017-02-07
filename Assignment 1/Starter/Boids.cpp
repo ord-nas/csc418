@@ -1065,6 +1065,7 @@ void drawBoid(int i)
  // you can use the Boid_Color[][] array instead if you
  // want to change boid colours yourself.
 
+ int detail = 4;
  glColor4f(1,.35,.1,1);	// This specifies colour as R,G,B,alpha.
 			// the alpha component specifies transparency.
 			// if alpha=1 the colour is completely opaque,
@@ -1073,8 +1074,44 @@ void drawBoid(int i)
 
  glPushMatrix();	// Save current transformation matrix
 			// Apply necessary transformations to this boid
-  glTranslatef(Boid_Location[i][0],Boid_Location[i][1],Boid_Location[i][2]);
-  gluSphere(my_quad,.5,4,4);	// Draw this boid
+ glTranslatef(Boid_Location[i][0],Boid_Location[i][1],Boid_Location[i][2]);
+ //glRotate
+ //glTranslatef(25,0,0);
+ glScalef(0.5,0.5,0.5);
+
+ glPushMatrix();
+  glScalef(1,2,4);
+  gluSphere(my_quad,1.0,detail,detail);	// Draw this boid
+  glPopMatrix();
+
+  glPushMatrix();
+  glScalef(0.5,2,4);
+  glTranslatef(0,0,-1.5);
+  glutSolidCone(1.0,0.8,detail,detail);
+  glPopMatrix();
+
+  glPushMatrix();
+  glScalef(1,3,4);
+  glScalef(0.5,1.0,1.0);
+  glTranslatef(0,0.6,-0.3);
+  glutSolidCone(0.6,0.6,detail,detail);
+  glPopMatrix();
+
+  glPushMatrix();
+  glScalef(1,3,4);
+  glScalef(3.0,0.3,1.0);
+  glTranslatef(0.3,0,-0.3);
+  glutSolidCone(0.6,0.6,detail,detail);
+  glPopMatrix();
+
+  glPushMatrix();
+  glScalef(1,3,4);
+  glScalef(3.0,0.3,1.0);
+  glTranslatef(-0.3,0,-0.3);
+  glutSolidCone(0.6,0.6,detail,detail);
+  glPopMatrix();
+
+  
  glPopMatrix();		// Restore transformation matrix so it's
 			// ready for the next boid.
 
