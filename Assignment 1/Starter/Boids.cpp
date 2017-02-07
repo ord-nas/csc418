@@ -353,7 +353,7 @@ void setupUI()
 
     ImGui::SetWindowFocus();
         ImGui::ColorEdit3("clear color", (float*)&clear_color);
-    ImGui::SliderFloat("rotation", &global_rot, 0.0f, 1.0f);
+    ImGui::SliderFloat("rotation", &global_rot, 0.0f, 360.0);
     ImGui::SliderFloat("k_rule0", &k_rule0, 0.0f, 1.0f);
     ImGui::SliderFloat("r_rule1", &r_rule1, 10.0f, 100.0f);
     ImGui::SliderFloat("k_rule1", &k_rule1, 0.0f, 1.0f);
@@ -503,6 +503,9 @@ void WindowDisplay(void)
     // matrix.
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    // Rotation around vertical axis
+    glRotatef(global_rot, 0, 1, 0);
 
     // Draw box bounding the viewing area
     glColor4f(.95,.95,.95,.95);
