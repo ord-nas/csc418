@@ -1,9 +1,9 @@
 CSC D18 - Fall 2016 - Assignment 1 Checklist/Grading sheet
 _____________________________________________________________________________
 
-Name: 
-Student ID:
-mathlab user name (UTSCid):
+Name: Sandro Young
+Student ID: 999729566
+UTORID: youngsan
 
 (failure to provide name and student ID will cost you marks)
 _____________________________________________________________________________ 
@@ -15,13 +15,13 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be
    UofT Code of Behaviour on Academic Matters found at
    http://www.governingcouncil.utoronto.ca/policies/behaveac.htm
 
-   ___Yes   ___No
+   _X_Yes   ___No
 
 
 2. I collaborated on this assignment with another student or borrowed 
    code from another source 
 
-   ___Yes   ___No
+   ___Yes   _X_No
 
    If Yes, you must clearly note in your program which parts are 
    common/borrowed and which are yours, failure to do so will be 
@@ -42,7 +42,7 @@ B. PLACE AN (X) IN THE CORRESPONDING PLACE. For any partially completed
    
 Description/value		Completed	Partial	    Not done	Mark
 
-* Add conttrols for the
+* Add conttrols for the             X
   variables that affect
   Boid motion:
   k_rule1, k_rule2, k_rule3,
@@ -50,31 +50,31 @@ Description/value		Completed	Partial	    Not done	Mark
   and global rotation.
   (5 marks)
 
-* Correctly implemented
+* Correctly implemented             X
   (working!) Boid update
   rule 1
   (5 marks)
 
-* Correctly implemented
+* Correctly implemented             X
   (working) Boid update
   rule 2
   (5 marks)
 
-* Correctly implemented
+* Correctly implemented             X
   (working) Boid update
   rule 3   
   (5 marks)
 
-* Correctly implemented
+* Correctly implemented             X
   (working) Boid update
   rule 0 (Paco's rule)
   (5 marks)
 
-* Correctly implemented
+* Correctly implemented             X
   Boid position update
   (5 marks)
 
-* Completed boid drawing
+* Completed boid drawing            X
   function with something
   that is not a simple
   sphere, single polygon,
