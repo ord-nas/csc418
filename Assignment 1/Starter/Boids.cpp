@@ -927,9 +927,10 @@ void updateBoid(int i)
  // Finally (phew!) update the position
  // of this boid.
  ///////////////////////////////////////////
- Boid_Location[i][0] += Boid_Velocity[i][0];
- Boid_Location[i][1] += Boid_Velocity[i][1];
- Boid_Location[i][2] += Boid_Velocity[i][2];
+ float velocity_scale = 1;//0.03;
+ Boid_Location[i][0] += Boid_Velocity[i][0] * velocity_scale;
+ Boid_Location[i][1] += Boid_Velocity[i][1] * velocity_scale;
+ Boid_Location[i][2] += Boid_Velocity[i][2] * velocity_scale;
 
  ///////////////////////////////////////////
  // CRUNCHY:
