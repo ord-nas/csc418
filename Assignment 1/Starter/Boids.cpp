@@ -1075,9 +1075,18 @@ void drawBoid(int i)
  glPushMatrix();	// Save current transformation matrix
 			// Apply necessary transformations to this boid
  glTranslatef(Boid_Location[i][0],Boid_Location[i][1],Boid_Location[i][2]);
- //glRotate
+ 
+ float x = Boid_Velocity[i][0];
+ float y = Boid_Velocity[i][1];
+ float z = Boid_Velocity[i][2];
+ float rho = sqrt(x*x + y*y + z*z);
+ float phi = acos(y/rho) * 180 / PI;
+ float theta = atan2(x, z) * 180 / PI;
+ glRotatef(theta, 0, 1, 0);
+ glRotatef(phi-90, 1, 0, 0);
  //glTranslatef(25,0,0);
  glScalef(0.5,0.5,0.5);
+ //glScalef(5,5,5);
 
  glPushMatrix();
   glScalef(1,2,4);
