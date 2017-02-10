@@ -800,180 +800,181 @@ void updateBoid(int i)
   Boid_Velocity[i][1] += k_rule3 * V3[1];
   Boid_Velocity[i][2] += k_rule3 * V3[2];  
 
- ///////////////////////////////////////////
- // Enforcing bounds on motion
- //
- //  This is already implemented: The goal
- // is to ensure boids won't stray too far
- // from the viewing area.
- //
- //  This is done exactly as described in the
- // reference.
- //
- //  Bounds on the viewing region are
- //
- //  -50 to 50 on each of the X, Y, and Z
- //  directions.
- ///////////////////////////////////////////
- if (Boid_Location[i][0]<-50) Boid_Velocity[i][0]+=1.0;
- if (Boid_Location[i][0]>50) Boid_Velocity[i][0]-=1.0;
- if (Boid_Location[i][1]<-50) Boid_Velocity[i][1]+=1.0;
- if (Boid_Location[i][1]>50) Boid_Velocity[i][1]-=1.0;
- if (Boid_Location[i][2]<-50) Boid_Velocity[i][2]+=1.0;
- if (Boid_Location[i][2]>50) Boid_Velocity[i][2]-=1.0;
+  ///////////////////////////////////////////
+  // Enforcing bounds on motion
+  //
+  //  This is already implemented: The goal
+  // is to ensure boids won't stray too far
+  // from the viewing area.
+  //
+  //  This is done exactly as described in the
+  // reference.
+  //
+  //  Bounds on the viewing region are
+  //
+  //  -50 to 50 on each of the X, Y, and Z
+  //  directions.
+  ///////////////////////////////////////////
+  float delta = 2.0;
+  if (Boid_Location[i][0]<-50) Boid_Velocity[i][0]+=delta;
+  if (Boid_Location[i][0]>50) Boid_Velocity[i][0]-=delta;
+  if (Boid_Location[i][1]<-50) Boid_Velocity[i][1]+=delta;
+  if (Boid_Location[i][1]>50) Boid_Velocity[i][1]-=delta;
+  if (Boid_Location[i][2]<-50) Boid_Velocity[i][2]+=delta;
+  if (Boid_Location[i][2]>50) Boid_Velocity[i][2]-=delta;
 
- ///////////////////////////////////////////
- // CRUNCHY: Add a 'shapeness' component.
- //  this should give your Boids a tendency
- //  to hover near one of the points of a
- //  3D model imported from file. Evidently
- //  each Boid should hover to a different
- //  point, and you must figure out how to
- //  make the void fly toward that spot
- //  and hover more-or-less around it
- //  (depending on all Boid parameters
- //   for the above rules). 
- //
- //  3D model data is imported for you when 
- //  the user specifies the name of a model
- //  file in .3ds format from the command
- //  line. 
- //
- //  The model data
- //  is stored in the modelVertices array
- //  and the number of vertices is in
- //  n_vertices (if zero, there is no model
- //  and the shapeness component should
- //  have no effect whatsoever)
- //
- //  The coordinates (x,y,z) of the ith
- //  mode, vertex can be accessed with
- //  x=*(modelVertices+(3*i)+0);
- //  y=*(modelVertices+(3*i)+1);
- //  z=*(modelVertices+(3*i)+2);
- //
- //  Evidently, if you try to access more
- //  points than there are in the array
- //  you will get segfault (don't say I
- //  didn't warn you!). Be careful with
- //  indexing.
- //
- //  shapeness should be in [0,1], and
- //  there is already a global variable
- //  to store it. You must add a slider
- //  to the GUI to control the amount of
- //  shapeness (i.e. how strong the shape
- //  constraints affect Boid position).
- //
- //  .3ds models can be found online, you
- //  *must ensure* you are using a freely
- //  distributable model!
- //
- //////////////////////////////////////////
+  ///////////////////////////////////////////
+  // CRUNCHY: Add a 'shapeness' component.
+  //  this should give your Boids a tendency
+  //  to hover near one of the points of a
+  //  3D model imported from file. Evidently
+  //  each Boid should hover to a different
+  //  point, and you must figure out how to
+  //  make the void fly toward that spot
+  //  and hover more-or-less around it
+  //  (depending on all Boid parameters
+  //   for the above rules). 
+  //
+  //  3D model data is imported for you when 
+  //  the user specifies the name of a model
+  //  file in .3ds format from the command
+  //  line. 
+  //
+  //  The model data
+  //  is stored in the modelVertices array
+  //  and the number of vertices is in
+  //  n_vertices (if zero, there is no model
+  //  and the shapeness component should
+  //  have no effect whatsoever)
+  //
+  //  The coordinates (x,y,z) of the ith
+  //  mode, vertex can be accessed with
+  //  x=*(modelVertices+(3*i)+0);
+  //  y=*(modelVertices+(3*i)+1);
+  //  z=*(modelVertices+(3*i)+2);
+  //
+  //  Evidently, if you try to access more
+  //  points than there are in the array
+  //  you will get segfault (don't say I
+  //  didn't warn you!). Be careful with
+  //  indexing.
+  //
+  //  shapeness should be in [0,1], and
+  //  there is already a global variable
+  //  to store it. You must add a slider
+  //  to the GUI to control the amount of
+  //  shapeness (i.e. how strong the shape
+  //  constraints affect Boid position).
+  //
+  //  .3ds models can be found online, you
+  //  *must ensure* you are using a freely
+  //  distributable model!
+  //
+  //////////////////////////////////////////
 
- ///////////////////////////////////////////
- // Velocity Limit:
- //  This is already implemented. The goal
- // is simply to avoid boids shooting off
- // at unrealistic speeds.
- //
- //  You can tweak this part if you like,
- // or you can simply leave it be.
- //
- //  The speed clamping used here was determined
- // 'experimentally', i.e. I tweaked it by hand!
- ///////////////////////////////////////////
- Boid_Velocity[i][0]=sign(Boid_Velocity[i][0])*sqrt(fabs(Boid_Velocity[i][0]));
- Boid_Velocity[i][1]=sign(Boid_Velocity[i][1])*sqrt(fabs(Boid_Velocity[i][1]));
- Boid_Velocity[i][2]=sign(Boid_Velocity[i][2])*sqrt(fabs(Boid_Velocity[i][2]));
+  ///////////////////////////////////////////
+  // Velocity Limit:
+  //  This is already implemented. The goal
+  // is simply to avoid boids shooting off
+  // at unrealistic speeds.
+  //
+  //  You can tweak this part if you like,
+  // or you can simply leave it be.
+  //
+  //  The speed clamping used here was determined
+  // 'experimentally', i.e. I tweaked it by hand!
+  ///////////////////////////////////////////
+  Boid_Velocity[i][0]=sign(Boid_Velocity[i][0])*sqrt(fabs(Boid_Velocity[i][0]));
+  Boid_Velocity[i][1]=sign(Boid_Velocity[i][1])*sqrt(fabs(Boid_Velocity[i][1]));
+  Boid_Velocity[i][2]=sign(Boid_Velocity[i][2])*sqrt(fabs(Boid_Velocity[i][2]));
 
- ///////////////////////////////////////////
- //
- // TO DO:
- //
- // Paco's Rule Zero,
- //
- //   Boids have inertia - they like to keep
- // going in the same direction as before.
- //
- //   Add a component to the boid velocity
- // that depends on the previous velocity
- // (i.e. before the above updates). The weight
- // of this term is given by k_rule0, which
- // can be set in the user interface.
- //
- // Vaid ranges:
- //   0 < k_rule0 < 1
- ///////////////////////////////////////////
- Boid_Velocity[i][0] += k_rule0 * previous_velocity[0];
- Boid_Velocity[i][1] += k_rule0 * previous_velocity[1];
- Boid_Velocity[i][2] += k_rule0 * previous_velocity[2];
+  ///////////////////////////////////////////
+  //
+  // TO DO:
+  //
+  // Paco's Rule Zero,
+  //
+  //   Boids have inertia - they like to keep
+  // going in the same direction as before.
+  //
+  //   Add a component to the boid velocity
+  // that depends on the previous velocity
+  // (i.e. before the above updates). The weight
+  // of this term is given by k_rule0, which
+  // can be set in the user interface.
+  //
+  // Vaid ranges:
+  //   0 < k_rule0 < 1
+  ///////////////////////////////////////////
+  Boid_Velocity[i][0] += k_rule0 * previous_velocity[0];
+  Boid_Velocity[i][1] += k_rule0 * previous_velocity[1];
+  Boid_Velocity[i][2] += k_rule0 * previous_velocity[2];
 
- ///////////////////////////////////////////
- // QUESTION: Why add inertia at the end and
- //  not at the beginning?
- ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  // QUESTION: Why add inertia at the end and
+  //  not at the beginning?
+  ///////////////////////////////////////////
 
- ///////////////////////////////////////////
- //
- // TO DO: (Done)
- //
- // Finally (phew!) update the position
- // of this boid.
- ///////////////////////////////////////////
- float velocity_scale = 1;//0.03;
- Boid_Location[i][0] += Boid_Velocity[i][0] * velocity_scale;
- Boid_Location[i][1] += Boid_Velocity[i][1] * velocity_scale;
- Boid_Location[i][2] += Boid_Velocity[i][2] * velocity_scale;
+  ///////////////////////////////////////////
+  //
+  // TO DO: (Done)
+  //
+  // Finally (phew!) update the position
+  // of this boid.
+  ///////////////////////////////////////////
+  float velocity_scale = 1;//0.03;
+  Boid_Location[i][0] += Boid_Velocity[i][0] * velocity_scale;
+  Boid_Location[i][1] += Boid_Velocity[i][1] * velocity_scale;
+  Boid_Location[i][2] += Boid_Velocity[i][2] * velocity_scale;
 
- ///////////////////////////////////////////
- // CRUNCHY:
- //
- //  Things you can add here to make the behaviour
- // more interesting. Be sure to note in your
- // report any extra work you have done.
- //
- // - Add a few obstacles (boxes or something like it)
- //   and add code to have boids avoid these
- //   obstacles
- //
- // - Follow the leader: Select a handful
- //   (1 to 5) boids randomly. Add code so that
- //   nearby boids tend to move toward these
- //   'leaders'
- //
- // - Make the updates smoother: Idea, instead
- //   of having hard thresholds on distances for
- //   the update computations (r_rule1, r_rule2,
- //   r_rule3), use a weighted computation
- //   where contributions are weighted by
- //   distance and the weight decays as a
- //   function of the corresponding r_rule
- //   parameter.
- //
- // - Add a few 'predatory boids'. Select
- //   a couple of boids randomly. These become
- //   predators and the rest of the boids
- //   should have a strong tendency to
- //   avoid them. The predatory boids should
- //   follow the standard rules. However,
- //   Be sure to plot the predatory boids
- //   differently so we can easily see
- //   who they are.
- //
- // - Make it go FAST. Consider and implement
- //   ways to speed-up the boid update. Hint:
- //   good approximations are often enough
- //   to give the right visual impression.
- //   What and how to approximate? that is the
- //   problem.
- //
- //   Thoroughly describe any crunchy stuff in
- //   the REPORT.
- //
- ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  // CRUNCHY:
+  //
+  //  Things you can add here to make the behaviour
+  // more interesting. Be sure to note in your
+  // report any extra work you have done.
+  //
+  // - Add a few obstacles (boxes or something like it)
+  //   and add code to have boids avoid these
+  //   obstacles
+  //
+  // - Follow the leader: Select a handful
+  //   (1 to 5) boids randomly. Add code so that
+  //   nearby boids tend to move toward these
+  //   'leaders'
+  //
+  // - Make the updates smoother: Idea, instead
+  //   of having hard thresholds on distances for
+  //   the update computations (r_rule1, r_rule2,
+  //   r_rule3), use a weighted computation
+  //   where contributions are weighted by
+  //   distance and the weight decays as a
+  //   function of the corresponding r_rule
+  //   parameter.
+  //
+  // - Add a few 'predatory boids'. Select
+  //   a couple of boids randomly. These become
+  //   predators and the rest of the boids
+  //   should have a strong tendency to
+  //   avoid them. The predatory boids should
+  //   follow the standard rules. However,
+  //   Be sure to plot the predatory boids
+  //   differently so we can easily see
+  //   who they are.
+  //
+  // - Make it go FAST. Consider and implement
+  //   ways to speed-up the boid update. Hint:
+  //   good approximations are often enough
+  //   to give the right visual impression.
+  //   What and how to approximate? that is the
+  //   problem.
+  //
+  //   Thoroughly describe any crunchy stuff in
+  //   the REPORT.
+  //
+  ///////////////////////////////////////////
 
- return;
+  return;
 }
 
 void drawBoid(int i)
