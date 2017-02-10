@@ -580,6 +580,10 @@ void WindowDisplay(void) {
   glutPostRedisplay();
 }
 
+bool isPredator(int i) {
+  return (i < num_predators);
+}
+
 void updateBoid(int i) {
   /*
     This function updates the position and velocity of Boid i, read the handout
@@ -600,6 +604,9 @@ void updateBoid(int i) {
   // Add at the top of this function any variables
   // needed.
   ///////////////////////////////////////////
+  
+  // Save the previous velocity (before updates) so we can use it in inertia
+  // calculations.
   float previous_velocity[3];
   previous_velocity[0] = Boid_Velocity[i][0];
   previous_velocity[1] = Boid_Velocity[i][1];
@@ -672,7 +679,7 @@ void updateBoid(int i) {
   // First sum up all of the positions of nearby boids
   for (int j = 0; j < nBoids; ++j) {
     // Note that non-predators should not be attracted to predators.
-    if (j < num_predators && i >= num_predators) continue;
+    if (isPredator(j) && !isPredator(i)) continue;
     // Calculate the distance between boid j and boid i
     float dx = Boid_Location[j][0] - Boid_Location[i][0];
     float dy = Boid_Location[j][1] - Boid_Location[i][1];
@@ -710,8 +717,8 @@ void updateBoid(int i) {
   ///////////////////////////////////////////
 
   // Predatory boid update
-  if (i >= num_predators) {
-    // Then the current boid is NOT a predator, so it needs to avoid predators.
+  if (!isPredator(i)) {
+    // If the current boid is NOT a predator, it needs to avoid predators.
     float VP[3] = {0.0, 0.0, 0.0}; // Accumulate the pushes from the predators.
     // Iterator over all the predators.
     for (int j = 0; j < num_predators; ++j) {
@@ -731,7 +738,6 @@ void updateBoid(int i) {
       VP[1] += (dy / distance) * force;
       VP[2] += (dz / distance) * force;
     }
-
     // We want to cap the total repulsion from *all* predators at MAX_REPULSION.
     float repulsion_norm = sqrt(VP[0]*VP[0] + VP[1]*VP[1] + VP[2]*VP[2]);
     if (repulsion_norm > MAX_REPULSION) {
@@ -739,7 +745,6 @@ void updateBoid(int i) {
       VP[1] = VP[1] / repulsion_norm * MAX_REPULSION;
       VP[2] = VP[2] / repulsion_norm * MAX_REPULSION;
     }
-
     // Finally, apply the update.
     Boid_Velocity[i][0] -= VP[0];
     Boid_Velocity[i][1] -= VP[1];
@@ -773,7 +778,6 @@ void updateBoid(int i) {
   //  1 <= r_rule2 <= 15
   //  0 <= k_rule2 <= 1
   ///////////////////////////////////////////
-  float V2[3] = {0.0, 0.0, 0.0};
   // First find all of the nearby boids
   for (int j = 0; j < nBoids; ++j) {
     // Calculate the distance between boid j and boid i
@@ -782,18 +786,12 @@ void updateBoid(int i) {
     float dz = Boid_Location[j][2] - Boid_Location[i][2];
     float distance = sqrt(dx*dx + dy*dy + dz*dz);
     if (distance <= r_rule2) {
-      // If boid j is close enough to boid i, then calculate a vector from i to
-      // j and add that to V2.
-      V2[0] += dx;
-      V2[1] += dy;
-      V2[2] += dz;
+      // If boid j is close enough to boid i, then push i away from j.
+      Boid_Velocity[i][0] -= k_rule2 * dx;
+      Boid_Velocity[i][1] -= k_rule2 * dy;
+      Boid_Velocity[i][2] -= k_rule2 * dz;
     }
   }
-  // Finally update the boid's velocity
-  Boid_Velocity[i][0] -= k_rule2 * V2[0];
-  Boid_Velocity[i][1] -= k_rule2 * V2[1];
-  Boid_Velocity[i][2] -= k_rule2 * V2[2];  
-
 
   ///////////////////////////////////////////
   //
@@ -827,7 +825,7 @@ void updateBoid(int i) {
   // First sum up all of the velocities of nearby boids
   for (int j = 0; j < nBoids; ++j) {
     // Note that non-predators should NOT try to velocity-match with predators.
-    if (j < num_predators && i >= num_predators) continue;
+    if (isPredator(j) && !isPredator(i)) continue;
     // Calculate the distance between boid j and boid i
     float dx = Boid_Location[j][0] - Boid_Location[i][0];
     float dy = Boid_Location[j][1] - Boid_Location[i][1];
@@ -979,10 +977,9 @@ void updateBoid(int i) {
   // Finally (phew!) update the position
   // of this boid.
   ///////////////////////////////////////////
-  float velocity_scale = 1;//0.03;
-  Boid_Location[i][0] += Boid_Velocity[i][0] * velocity_scale;
-  Boid_Location[i][1] += Boid_Velocity[i][1] * velocity_scale;
-  Boid_Location[i][2] += Boid_Velocity[i][2] * velocity_scale;
+  Boid_Location[i][0] += Boid_Velocity[i][0];
+  Boid_Location[i][1] += Boid_Velocity[i][1];
+  Boid_Location[i][2] += Boid_Velocity[i][2];
 
   ///////////////////////////////////////////
   // CRUNCHY:
@@ -1117,10 +1114,19 @@ void drawBoid(int i) {
   // you can use the Boid_Color[][] array instead if you
   // want to change boid colours yourself.
 
+  // Get the boid's velocity, and convert to spherical coordinates. Note,
+  // however, that these aren't "standard" spherical coordinates; we are using a
+  // rotated coordinate system to define them, which turned out to be more
+  // convenient. If the standard spherical coordinates use (x, y, z), then our
+  // coordinates use:
+  // x' = z
+  // y' = x
+  // z' = y
   float x = Boid_Velocity[i][0];
   float y = Boid_Velocity[i][1];
   float z = Boid_Velocity[i][2];
   float rho = sqrt(x*x + y*y + z*z);
+  // Angles are in degrees
   float phi = acos(y/rho) * 180 / PI;
   float theta = atan2(x, z) * 180 / PI;
 
@@ -1134,22 +1140,18 @@ void drawBoid(int i) {
     HSV2RGB(H, S, V, &R, &G, &B);
   } else {
     // Otherwise, just colour the boid red for predator, blue for non-predator.
-    if (i < num_predators) {
-      R = 1.0;
-      G = 0.0;
-      B = 0.0;
-    } else {
-      R = 0.0;
-      G = 0.0;
-      B = 1.0;
-    }
+    R = isPredator(i) ? 1.0 : 0.0;
+    G = 0.0;
+    B = isPredator(i) ? 0.0 : 1.0;
   }
 
-  // First draw the history
+  // First draw the trails
   if (trail_length > 0) {
-    glColor4f(R, G, B, 0.5);
+    glColor4f(R, G, B, 0.5); // Make trails slightly transparent.
     glBegin(GL_LINE_STRIP);
     for (int j = 0; j < trail_length; ++j) {
+      // Boid_History is a circular buffer, so we need to make sure we index it
+      // properly, starting at the current head and walking backwards.
       int index = (HISTORY_LEN + history_cursor - j) % HISTORY_LEN;
       glVertex3f(Boid_History[i][index][0],
 		 Boid_History[i][index][1],
@@ -1158,7 +1160,7 @@ void drawBoid(int i) {
     glEnd();
   }
   
-  glColor4f(R, G, B, 1);
+  glColor4f(R, G, B, 1); // The boid itself should *NOT* be transparent
   int detail = 4; // How much detail to use when drawing the boids
 
   glPushMatrix();        // Save current transformation matrix
@@ -1170,17 +1172,20 @@ void drawBoid(int i) {
   glRotatef(phi-90, 1, 0, 0);
   glScalef(0.5,0.5,0.5);
 
+  // Draw the body
   glPushMatrix();
   glScalef(1,2,4);
   gluSphere(my_quad,1.0,detail,detail);
   glPopMatrix();
 
+  // Draw the back fin
   glPushMatrix();
   glScalef(0.5,2,4);
   glTranslatef(0,0,-1.5);
   glutSolidCone(1.0,0.8,detail,detail);
   glPopMatrix();
 
+  // Draw the top fin
   glPushMatrix();
   glScalef(1,3,4);
   glScalef(0.5,1.0,1.0);
@@ -1188,6 +1193,7 @@ void drawBoid(int i) {
   glutSolidCone(0.6,0.6,detail,detail);
   glPopMatrix();
 
+  // Draw the left fin
   glPushMatrix();
   glScalef(1,3,4);
   glScalef(3.0,0.3,1.0);
@@ -1195,6 +1201,7 @@ void drawBoid(int i) {
   glutSolidCone(0.6,0.6,detail,detail);
   glPopMatrix();
 
+  // Draw the right fin
   glPushMatrix();
   glScalef(1,3,4);
   glScalef(3.0,0.3,1.0);
