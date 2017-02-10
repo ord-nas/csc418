@@ -103,9 +103,14 @@ Written by: F. Estrada, Jun 2011.
 #define MAX_BOIDS 2000
 #define SPACE_SCALE 75
 #define SPEED_SCALE 2
+#define HISTORY_LEN 20
 const float PI = 3.14159;
 int nBoids;                             // Number of boids to dispay
 float Boid_Location[MAX_BOIDS][3];      // Pointers to dynamically allocated
+// Variables for drawing trails
+float Boid_History[MAX_BOIDS][HISTORY_LEN][3];
+int history_cursor;
+int trail_length;
 float Boid_Velocity[MAX_BOIDS][3];      // Boid position & velocity data
 float *modelVertices;                   // Imported model vertices
 int n_vertices;                         // Number of model vertices
@@ -208,7 +213,13 @@ int main(int argc, char** argv) {
     Boid_Velocity[i][0]=(-.5+drand48())*SPEED_SCALE;
     Boid_Velocity[i][1]=(-.5+drand48())*SPEED_SCALE;
     Boid_Velocity[i][2]=(-.5+drand48())*SPEED_SCALE;
+    for (int j = 0; j < HISTORY_LEN; ++j) {
+      Boid_History[i][j][0] = Boid_Location[i][0];
+      Boid_History[i][j][1] = Boid_Location[i][1];
+      Boid_History[i][j][2] = Boid_Location[i][2];
+    }
   }
+  history_cursor = 0;
 
   // Initialize glut, glui, and opengl
   glutInit(&argc, argv);
@@ -226,6 +237,7 @@ int main(int argc, char** argv) {
   k_rule0=0.1;
   shapeness=0;
   global_rot=0;
+  trail_length=0;
 
   // Invoke the standard GLUT main event loop
   glutMainLoop();
@@ -335,11 +347,16 @@ void setupUI() {
   ImGui::SetWindowFocus();
   ImGui::ColorEdit3("clear color", (float*)&clear_color);
   ImGui::SliderFloat("rotation", &global_rot, 0.0f, 360.0);
+  ImGui::SliderInt("trail length", &trail_length, 0, HISTORY_LEN);
+  ImGui::Separator();
   ImGui::SliderFloat("k_rule0", &k_rule0, 0.0f, 1.0f);
+  ImGui::Separator();
   ImGui::SliderFloat("r_rule1", &r_rule1, 10.0f, 100.0f);
   ImGui::SliderFloat("k_rule1", &k_rule1, 0.0f, 1.0f);
+  ImGui::Separator();
   ImGui::SliderFloat("r_rule2", &r_rule2, 1.0f, 15.0f);
   ImGui::SliderFloat("k_rule2", &k_rule2, 0.0f, 1.0f);
+  ImGui::Separator();
   ImGui::SliderFloat("r_rule3", &r_rule3, 10.0f, 100.0f);
   ImGui::SliderFloat("k_rule3", &k_rule3, 0.0f, 1.0f);
 
@@ -532,6 +549,13 @@ void WindowDisplay(void) {
   for (int i=0; i<nBoids; i++) {
     updateBoid(i);            // Update position and velocity for boid i
     drawBoid(i);              // Draw this boid
+  }
+
+  // Update the history cursor every frame. The cursor keeps track of which
+  // index in the circular buffer is currently the head.
+  ++history_cursor;
+  if (history_cursor >= HISTORY_LEN) {
+    history_cursor = 0;
   }
 
   setupUI();
@@ -897,6 +921,11 @@ void updateBoid(int i) {
   //  not at the beginning?
   ///////////////////////////////////////////
 
+  // Just before updating the position, store it in the history.
+  Boid_History[i][history_cursor][0] = Boid_Location[i][0];
+  Boid_History[i][history_cursor][1] = Boid_Location[i][1];
+  Boid_History[i][history_cursor][2] = Boid_Location[i][2];
+  
   ///////////////////////////////////////////
   //
   // TO DO: (Done)
@@ -1054,8 +1083,21 @@ void drawBoid(int i) {
   float V = 1.0;
   float R, G, B;
   HSV2RGB(H, S, V, &R, &G, &B);
-  glColor4f(R, G, B, 1);
 
+  // First draw the history
+  if (trail_length > 0) {
+    glColor4f(R, G, B, 0.5);
+    glBegin(GL_LINE_STRIP);
+    for (int j = 0; j < trail_length; ++j) {
+      int index = (HISTORY_LEN + history_cursor - j) % HISTORY_LEN;
+      glVertex3f(Boid_History[i][index][0],
+		 Boid_History[i][index][1],
+		 Boid_History[i][index][2]);
+    }
+    glEnd();
+  }
+  
+  glColor4f(R, G, B, 1);
   int detail = 4; // How much detail to use when drawing the boids
 
   glPushMatrix();        // Save current transformation matrix
