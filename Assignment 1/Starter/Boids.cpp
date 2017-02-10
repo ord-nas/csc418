@@ -214,27 +214,27 @@ int main(int argc, char** argv)
     Boid_Velocity[i][2]=(-.5+drand48())*SPEED_SCALE;
   }
 
-    // Initialize glut, glui, and opengl
-    glutInit(&argc, argv);
-    initGlut(argv[0]);
-    ImGui_ImplGlut_Init(false);
-    GL_Settings_Init();
+  // Initialize glut, glui, and opengl
+  glutInit(&argc, argv);
+  initGlut(argv[0]);
+  ImGui_ImplGlut_Init(false);
+  GL_Settings_Init();
 
-    // Initialize variables that control the boid updates
-    r_rule1=15;
-    r_rule2=1;
-    r_rule3=25;
-    k_rule1=.15;
-    k_rule2=.5;
-    k_rule3=.15;
-    k_rule0=.25;
-    shapeness=0;
-    global_rot=0;
+  // Initialize variables that control the boid updates
+  r_rule1=12;
+  r_rule2=8;
+  r_rule3=15;
+  k_rule1=.25;
+  k_rule2=.4;
+  k_rule3=.5;
+  k_rule0=0.1;
+  shapeness=0;
+  global_rot=0;
 
-    // Invoke the standard GLUT main event loop
-    glutMainLoop();
-    ImGui_ImplGlut_Shutdown();
-    exit(0);         // never reached
+  // Invoke the standard GLUT main event loop
+  glutMainLoop();
+  ImGui_ImplGlut_Shutdown();
+  exit(0);         // never reached
 }
 
 // Initialize glut and create a window with the specified caption
