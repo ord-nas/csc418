@@ -107,13 +107,18 @@ Written by: F. Estrada, Jun 2011.
 const float PI = 3.14159;
 int nBoids;                             // Number of boids to dispay
 float Boid_Location[MAX_BOIDS][3];      // Pointers to dynamically allocated
+float Boid_Velocity[MAX_BOIDS][3];      // Boid position & velocity data
+float *modelVertices;                   // Imported model vertices
+int n_vertices;                         // Number of model vertices
+
 // Variables for drawing trails
 float Boid_History[MAX_BOIDS][HISTORY_LEN][3];
 int history_cursor;
 int trail_length;
-float Boid_Velocity[MAX_BOIDS][3];      // Boid position & velocity data
-float *modelVertices;                   // Imported model vertices
-int n_vertices;                         // Number of model vertices
+
+// Variables for predatory boids
+int num_predators;
+const float MAX_REPULSION = 1.5;
 
 // *************** USER INTERFACE VARIABLES *****************
 int windowID;               // Glut window ID (for display)
@@ -238,6 +243,7 @@ int main(int argc, char** argv) {
   shapeness=0;
   global_rot=0;
   trail_length=0;
+  num_predators=0;
 
   // Invoke the standard GLUT main event loop
   glutMainLoop();
@@ -348,6 +354,7 @@ void setupUI() {
   ImGui::ColorEdit3("clear color", (float*)&clear_color);
   ImGui::SliderFloat("rotation", &global_rot, 0.0f, 360.0);
   ImGui::SliderInt("trail length", &trail_length, 0, HISTORY_LEN);
+  ImGui::SliderInt("num_predators", &num_predators, 0, std::min(5,nBoids));
   ImGui::Separator();
   ImGui::SliderFloat("k_rule0", &k_rule0, 0.0f, 1.0f);
   ImGui::Separator();
@@ -664,6 +671,8 @@ void updateBoid(int i) {
   int num_nearby_boids = 0;
   // First sum up all of the positions of nearby boids
   for (int j = 0; j < nBoids; ++j) {
+    // Note that non-predators should not be attracted to predators.
+    if (j < num_predators && i >= num_predators) continue;
     // Calculate the distance between boid j and boid i
     float dx = Boid_Location[j][0] - Boid_Location[i][0];
     float dy = Boid_Location[j][1] - Boid_Location[i][1];
@@ -700,7 +709,42 @@ void updateBoid(int i) {
   // to improve this bit?
   ///////////////////////////////////////////
 
+  // Predatory boid update
+  if (i >= num_predators) {
+    // Then the current boid is NOT a predator, so it needs to avoid predators.
+    float VP[3] = {0.0, 0.0, 0.0}; // Accumulate the pushes from the predators.
+    // Iterator over all the predators.
+    for (int j = 0; j < num_predators; ++j) {
+      // Calculate the distance between boid j and boid i.
+      float dx = Boid_Location[j][0] - Boid_Location[i][0];
+      float dy = Boid_Location[j][1] - Boid_Location[i][1];
+      float dz = Boid_Location[j][2] - Boid_Location[i][2];
+      float distance = sqrt(dx*dx + dy*dy + dz*dz);
+      // We should give this boid a push away from the predator. The force of
+      // the push will be inversely proportional to the distance, up to a
+      // maximum of MAX_REPULSION.
+      double force = MAX_REPULSION;
+      if (distance != 0) { // avoid division by zero
+	force = std::min(force, 50.0 / distance);
+      }
+      VP[0] += (dx / distance) * force;
+      VP[1] += (dy / distance) * force;
+      VP[2] += (dz / distance) * force;
+    }
 
+    // We want to cap the total repulsion from *all* predators at MAX_REPULSION.
+    float repulsion_norm = sqrt(VP[0]*VP[0] + VP[1]*VP[1] + VP[2]*VP[2]);
+    if (repulsion_norm > MAX_REPULSION) {
+      VP[0] = VP[0] / repulsion_norm * MAX_REPULSION;
+      VP[1] = VP[1] / repulsion_norm * MAX_REPULSION;
+      VP[2] = VP[2] / repulsion_norm * MAX_REPULSION;
+    }
+
+    // Finally, apply the update.
+    Boid_Velocity[i][0] -= VP[0];
+    Boid_Velocity[i][1] -= VP[1];
+    Boid_Velocity[i][2] -= VP[2];
+  }
 
   ///////////////////////////////////////////
   //
@@ -782,6 +826,8 @@ void updateBoid(int i) {
   num_nearby_boids = 0;
   // First sum up all of the velocities of nearby boids
   for (int j = 0; j < nBoids; ++j) {
+    // Note that non-predators should NOT try to velocity-match with predators.
+    if (j < num_predators && i >= num_predators) continue;
     // Calculate the distance between boid j and boid i
     float dx = Boid_Location[j][0] - Boid_Location[i][0];
     float dy = Boid_Location[j][1] - Boid_Location[i][1];
@@ -971,7 +1017,7 @@ void updateBoid(int i) {
   //   follow the standard rules. However,
   //   Be sure to plot the predatory boids
   //   differently so we can easily see
-  //   who they are.
+  //   who they are. (DONE)
   //
   // - Make it go FAST. Consider and implement
   //   ways to speed-up the boid update. Hint:
@@ -1071,18 +1117,33 @@ void drawBoid(int i) {
   // you can use the Boid_Color[][] array instead if you
   // want to change boid colours yourself.
 
-  // Calculate boid colour as a function of the direction the boid is facing.
   float x = Boid_Velocity[i][0];
   float y = Boid_Velocity[i][1];
   float z = Boid_Velocity[i][2];
   float rho = sqrt(x*x + y*y + z*z);
   float phi = acos(y/rho) * 180 / PI;
   float theta = atan2(x, z) * 180 / PI;
-  float H = (theta+180.0)/360.0;
-  float S = 1.0 - (phi+90.0)/(180.0*4);
-  float V = 1.0;
+
   float R, G, B;
-  HSV2RGB(H, S, V, &R, &G, &B);
+  // If we are not in predatory mode:
+  // Calculate boid colour as a function of the direction the boid is facing.
+  if (num_predators == 0) {
+    float H = (theta+180.0)/360.0;
+    float S = 1.0 - (phi+90.0)/(180.0*4);
+    float V = 1.0;
+    HSV2RGB(H, S, V, &R, &G, &B);
+  } else {
+    // Otherwise, just colour the boid red for predator, blue for non-predator.
+    if (i < num_predators) {
+      R = 1.0;
+      G = 0.0;
+      B = 0.0;
+    } else {
+      R = 0.0;
+      G = 0.0;
+      B = 1.0;
+    }
+  }
 
   // First draw the history
   if (trail_length > 0) {
@@ -1158,7 +1219,7 @@ void drawBoid(int i) {
   ///////////////////////////////////////////
 
   ///////////////////////////////////////////
-  // CRUNCHY:
+  // CRUNCHY: (done)
   //
   //  Add trails that show nicely the last
   // few positions of each boid, if done
