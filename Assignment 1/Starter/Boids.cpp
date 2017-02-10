@@ -354,7 +354,7 @@ void setupUI() {
   ImGui::ColorEdit3("clear color", (float*)&clear_color);
   ImGui::SliderFloat("rotation", &global_rot, 0.0f, 360.0);
   ImGui::SliderInt("trail length", &trail_length, 0, HISTORY_LEN);
-  ImGui::SliderInt("num_predators", &num_predators, 0, std::min(5,nBoids));
+  ImGui::SliderInt("num predators", &num_predators, 0, std::min(5,nBoids));
   ImGui::Separator();
   ImGui::SliderFloat("k_rule0", &k_rule0, 0.0f, 1.0f);
   ImGui::Separator();
@@ -680,6 +680,15 @@ void updateBoid(int i) {
   for (int j = 0; j < nBoids; ++j) {
     // Note that non-predators should not be attracted to predators.
     if (isPredator(j) && !isPredator(i)) continue;
+    
+    // I am assuming that the boid i should itself be included in the centre of
+    // mass calculation. I asked about this on piazza
+    // (https://piazza.com/class/ixtintngcs01wb?cid=71) and never got an
+    // answer. If this is not the case, we'd also need this extra line of code,
+    // and some error-checking at the end (when dividing by num_nearby_boids) to
+    // avoid potential division-by-zero.
+    // if (i == j) continue;
+
     // Calculate the distance between boid j and boid i
     float dx = Boid_Location[j][0] - Boid_Location[i][0];
     float dy = Boid_Location[j][1] - Boid_Location[i][1];
@@ -826,6 +835,19 @@ void updateBoid(int i) {
   for (int j = 0; j < nBoids; ++j) {
     // Note that non-predators should NOT try to velocity-match with predators.
     if (isPredator(j) && !isPredator(i)) continue;
+
+    // I am assuming that the boid i should itself be included in the velocity
+    // average calculation. I asked about this on piazza
+    // (https://piazza.com/class/ixtintngcs01wb?cid=71) and never got an
+    // answer. If this is not the case, we'd also need this extra line of code,
+    // and some error-checking at the end (when dividing by num_nearby_boids) to
+    // avoid potential division-by-zero. Note also: at this point in time, rules
+    // 1 and 2 have already happened, so the current boid's velocity has already
+    // changed. I assume that this is intended
+    // (https://piazza.com/class/ixtintngcs01wb?cid=74 says not to change the
+    // update order).
+    // if (i == j) continue;
+    
     // Calculate the distance between boid j and boid i
     float dx = Boid_Location[j][0] - Boid_Location[i][0];
     float dy = Boid_Location[j][1] - Boid_Location[i][1];
@@ -865,7 +887,8 @@ void updateBoid(int i) {
   //  -50 to 50 on each of the X, Y, and Z
   //  directions.
   ///////////////////////////////////////////
-  float delta = 2.0;
+  float delta = 2.0; // I increased this to 2.0 to keep the boids more tightly
+		     // confined.
   if (Boid_Location[i][0]<-50) Boid_Velocity[i][0]+=delta;
   if (Boid_Location[i][0]>50) Boid_Velocity[i][0]-=delta;
   if (Boid_Location[i][1]<-50) Boid_Velocity[i][1]+=delta;
