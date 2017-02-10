@@ -4,26 +4,97 @@ In this file you must:
 
 __________________________________________________________________
 1) Describe *briefly* and *concisely* what parts of the assignment
-   you found easier, harder, and/or tricky to get right
+   you found easier, harder, and/or tricky to get right.
 
+   I found it fairly easy to implement each of the boid motion rules. The rules
+   are fairly simple, and we were given fairly explicit instructions. That said,
+   I had a harder time understanding exactly why the rules are defined the way
+   that they are (in particular, rule 0 - see
+   https://piazza.com/class/ixtintngcs01wb?cid=66 and the velocity clamping code
+   - see https://piazza.com/class/ixtintngcs01wb?cid=67). And there was one
+   implementation detail that I wasn't completely clear about:
+   https://piazza.com/class/ixtintngcs01wb?cid=71.
 
-
+   However, what I found most challenging was drawing an interesting boid
+   shape. Here's what I found hard:
+    1) Getting used to the OpenGL drawing conventions.
+    2) Drawing something that looked vaguely realistic (I'm a horrible artist).
+    3) Imagining points in a 3D coordinate system, and remembering which axis
+       was which.
+    4) Rotating the boids to face the correct direction was especially
+       challenging (writing the calculation to convert to spherical coordinates
+       and figuring out what rotation operations to perform).
 
 __________________________________________________________________
 2) Answer any //QUESTION: items noted in the code
 
+  QUESTION: Is this the optimal way to implement this rule? can you see any
+  problems or ways to improve this bit?
+  ANSWER: No, my implementation is not optimal. Here are some ways it could be
+  improved:
+   - I calculate each distance twice (once from boid A to B, when A is the boid
+     being updated and B is the potential neighbour, then again from boid B to
+     A, when B is being updated and A is the neighbour). It would be more
+     efficient to compute the distance once.
+   - The pairwaise distance between boids is also reused in rule 2, rule 3, and
+     the predatory update, but it is simply recalculated each time. It would be
+     more efficient to compute it once and store it (for example, by allocating
+     a 2D array to represent a distance matrix, computing the upper triangular
+     entries of the matrix once, and then reusing those entries multiple times).
+   - Distance requires a sqrt computation. I could avoid this by using *squared*
+     distance instead, and then simply squaring the value of r_rule1 (which only
+     needs to happen once).
+   - Even with these improvements, the distance calculation would still be
+     O(n^2) (because for each boid i, we iterate over all other boids j to
+     determine which are close enough to be considered
+     neighbours). Fundamentally, the problem we are tring to solve is call
+     "Fixed-radius near neighbour searching"
+     (http://www.slac.stanford.edu/cgi-wrap/getdoc/slac-r-186.pdf). As seen in
+     the article, there are more efficient techniques. We could round each
+     boid's position to the nearest multiple of r_rule1, and place boids into
+     different buckets based on their rounded position. Then when finding the
+     near neighbours, we only need to look in a small number of nearby buckets,
+     instead of searching over the entire set. The complexity of this approach
+     is O(n*m), where m is the number of neighbours of each boid. If m << n,
+     then this approach could be much more efficient.
 
-
-
-
-
+  QUESTION: Why add inertia at the end and not at the beginning?
+  ANSWER: It's more intuitive to add the inertia *after* the velocity clamping;
+  otherwise, the inertial component of velocity would be changed in some
+  nonlinear way by the clamping. Adding the inertia upfront would also cause
+  minor problems in rule 3 (when we compute the average velocity in rule 3, the
+  velocity of the current boid would already have the extra inertial component,
+  and so our average wouldn't be quite correct).
 
 __________________________________________________________________
 3) Describe any //CRUNCHY: extensions you implemented
 
+1. I (kind of) animate the boids. First, I rotate the boids (they are supposed
+   to be little fish) so that they point in the direction that they are
+   currently heading. This is accomplished by converting the boid velocity into
+   spherical coordinates, and then using the angles phi and theta to perform two
+   rotations around coordinate axes. Second, I colour the boids differently
+   based on their direction. This makes some nice colour patterns, and helps
+   highlight when boids are moving together as a group (since in this case,
+   their directions will tend to be similar, so their colours will be
+   similar). I map theta onto the H component of HSV colour and phi onto the S
+   component of HSV colour.
 
+2. I added trails to the boids. This feature is off by default, but can be
+   turned on by moving the "trail length" slider in the GUI. I store a history
+   of up to 20 past locations for each boid. I store these in a circular buffer
+   to make the implementation efficient. I use GL_LINE_STRIP to draw the trails.
 
-
+3. I implemented predatory boids. This feature is off by default, but can be
+   turned on by moving the "num predators" slider in the GUI. I think the best
+   effect is when num_predators == 1, since in this case you can clearly see how
+   much the other boids are avoiding the predator. In predatory mode, predators
+   will be coloured red and all other boids will be coloured blue. For each
+   non-predatory ("victim") boid, I add a force pushing the boid away from each
+   predator. The force is inversely proportional to the distance between the
+   predator and the victim, so that boids are repulsed more strongly the closer
+   they get to the predator. However, to avoid exploding velocities, I cap the
+   total magnitude of the repulsion vector.
 
 __________________________________________________________________
 
@@ -32,7 +103,19 @@ __________________________________________________________________
 a) What is the time complexity of the boid update (in big Oh notation),
    justify.
 
+   O(n^2). Rules 1, 2, and 3 are each O(n^2) since we need to loop over each
+   boid, and then loop over each neighbour to see if they are close enough to
+   interact. Each loop is a factor of n, giving O(n^2). Rule 0 is O(n) since we
+   need to loop over each boid, but then only need to do a constant amount of
+   work on each boid. O(n^2 + n) = O(n^2).
+
 b) What could you do to make the update more efficient?
+
+   See the suggestions in my answer to question 2. I could avoid sqrt in
+   distance computation, avoid calculating pairwise distances multiple times
+   (since they are calculated independently for each rule, and even within a
+   rule each distance is calculate twice), and use bucketing (or some other
+   technique) to make it asymptotically more efficient to find neighbours.
 
 c) What is the greatest bottleneck of the program:
 
@@ -41,9 +124,38 @@ c) What is the greatest bottleneck of the program:
 
     Why is that? justify your answer.
 
+   Asymptotically, the boid update code is the bottleneck (since it is O(n^2),
+   whereas drawing the boids is just O(n) - we do a constant amount of drawing
+   work for each boid). However, practically (for 2000 boids) the drawing is the
+   bottleneck. This can be determined by commenting out either updateBoid or
+   drawBoid in the WindowDisplay function, and observing the effect on frame
+   rate. I find this (on my home computer):
+
+   DRAWING ONLY: ~7 FPS
+   UPDATE ONLY: ~25 FPS
+
 d) How would you adapt the idea behind Boids to swarms of running
    creatures (e.g. a herd of charging animals, an army of CGI
    monsters, a crowd of simulated humans walking). Think of the
    specific conditions you would need to add to the simulation
-   that are different from your Boids implementation
+   that are different from your Boids implementation.
+
+   First, we'd need to make the simulation 2D instead of 3D. This would simply
+   involve removing one dimension from the location and velocity vectors.
+
+   Second, depending on the application we might need to add some kind of "goal"
+   to the herd as a whole, or to individual boids. For example, a herd of
+   charging animals or CGI monsters is probably charging *at* something, so we
+   might need to add a rule which tends to push boids towards their
+   target. Further, in a crowd of walking humans, each human has a goal in mind,
+   but those goals are *different* (i.e. each person is trying to get to
+   someplace in particular, but in general everybody is going somewhere
+   different). So we would have to add a rule that pushes each person towards
+   their individual goal.
+
+   Finally, we would probably have to adjust the parameters of the current
+   rules. There are fewer degrees of freedom in 2D space, so 2D boids won't be
+   able to pack as tightly (i.e., the amount of volume within x metres of a
+   point goes up with the cube of x in 3D space, but only the square of x in 2D
+   space). This would fundamentally change the dymanics of motion.
 
