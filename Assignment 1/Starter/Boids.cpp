@@ -66,6 +66,8 @@ Written by: F. Estrada, Jun 2011.
 ***********************************************************/
 
 #include <iostream>
+#include <algorithm>
+#include <math.h>
 
 /*
   Headers for 3DS management - model loading for point clouds
@@ -102,10 +104,9 @@ Written by: F. Estrada, Jun 2011.
 #define SPACE_SCALE 75
 #define SPEED_SCALE 2
 const float PI = 3.14159;
-int nBoids;				// Number of boids to dispay
-float Boid_Location[MAX_BOIDS][3];	// Pointers to dynamically allocated
-float Boid_Velocity[MAX_BOIDS][3];	// Boid position & velocity data
-float Boid_Color[MAX_BOIDS][3];	 	// RGB colour for each boid
+int nBoids;                             // Number of boids to dispay
+float Boid_Location[MAX_BOIDS][3];      // Pointers to dynamically allocated
+float Boid_Velocity[MAX_BOIDS][3];      // Boid position & velocity data
 float *modelVertices;                   // Imported model vertices
 int n_vertices;                         // Number of model vertices
 
@@ -197,28 +198,21 @@ int main(int argc, char** argv)
      }
     }
 
-    // Initialize Boid positions and velocity
-    // Mind the SPEED_SCALE. You may need to change it to
-    // achieve smooth animation - increase it if the
-    // animation is too slow. Decrease it if it's too
-    // fast and choppy.
-    srand48(1522);
-    for (int i=0; i<nBoids; i++)
-    {
-     // Initialize Boid locations and velocities randomly
-     Boid_Location[i][0]=(-.5+drand48())*SPACE_SCALE;
-     Boid_Location[i][1]=(-.5+drand48())*SPACE_SCALE;
-     Boid_Location[i][2]=(-.5+drand48())*SPACE_SCALE;
-     Boid_Velocity[i][0]=(-.5+drand48())*SPEED_SCALE;
-     Boid_Velocity[i][1]=(-.5+drand48())*SPEED_SCALE;
-     Boid_Velocity[i][2]=(-.5+drand48())*SPEED_SCALE;
-
-     // Initialize boid colour to solid blue-ish
-     // You may want to change this
-     Boid_Color[i][0]=.15;
-     Boid_Color[i][1]=.15;
-     Boid_Color[i][2]=1;
-    }
+  // Initialize Boid positions and velocity
+  // Mind the SPEED_SCALE. You may need to change it to
+  // achieve smooth animation - increase it if the
+  // animation is too slow. Decrease it if it's too
+  // fast and choppy.
+  srand48(1522);
+  for (int i=0; i<nBoids; i++) {
+    // Initialize Boid locations and velocities randomly
+    Boid_Location[i][0]=(-.5+drand48())*SPACE_SCALE;
+    Boid_Location[i][1]=(-.5+drand48())*SPACE_SCALE;
+    Boid_Location[i][2]=(-.5+drand48())*SPACE_SCALE;
+    Boid_Velocity[i][0]=(-.5+drand48())*SPEED_SCALE;
+    Boid_Velocity[i][1]=(-.5+drand48())*SPEED_SCALE;
+    Boid_Velocity[i][2]=(-.5+drand48())*SPEED_SCALE;
+  }
 
     // Initialize glut, glui, and opengl
     glutInit(&argc, argv);
@@ -1050,48 +1044,50 @@ void drawBoid(int i)
      my_quad=gluNewQuadric();	// Create a new quadric
  }
 
- // Remember the GL_MODELVIEW matrix that determines the
- // transformations that will be applied to objects
- // before drawing? well, we have only ONE of those, so
- // if we want different objects to be transformed in
- // different ways, we need to keep track of which
- // transformations are going to be applied to which
- // objects.
- //
- // In the case of simple spherical boids, all we need
- // to do is display them at the correct location,
- // but this location is different for each boid, so:
+  // Remember the GL_MODELVIEW matrix that determines the
+  // transformations that will be applied to objects
+  // before drawing? well, we have only ONE of those, so
+  // if we want different objects to be transformed in
+  // different ways, we need to keep track of which
+  // transformations are going to be applied to which
+  // objects.
+  //
+  // In the case of simple spherical boids, all we need
+  // to do is display them at the correct location,
+  // but this location is different for each boid, so:
 
- // Here I am setting the Boid's color to a fixed value,
- // you can use the Boid_Color[][] array instead if you
- // want to change boid colours yourself.
+  // Here I am setting the Boid's color to a fixed value,
+  // you can use the Boid_Color[][] array instead if you
+  // want to change boid colours yourself.
 
- int detail = 4;
- glColor4f(1,.35,.1,1);	// This specifies colour as R,G,B,alpha.
-			// the alpha component specifies transparency.
-			// if alpha=1 the colour is completely opaque,
-			// if alpha=0 it is completely transparent
-			// (will be invisible!)
+  // Calculate boid colour as a function of the direction the boid is facing.
+  float x = Boid_Velocity[i][0];
+  float y = Boid_Velocity[i][1];
+  float z = Boid_Velocity[i][2];
+  float rho = sqrt(x*x + y*y + z*z);
+  float phi = acos(y/rho) * 180 / PI;
+  float theta = atan2(x, z) * 180 / PI;
+  float H = (theta+180.0)/360.0;
+  float S = 1.0 - (phi+90.0)/(180.0*4);
+  float V = 1.0;
+  float R, G, B;
+  HSV2RGB(H, S, V, &R, &G, &B);
+  glColor4f(R, G, B, 1);
 
- glPushMatrix();	// Save current transformation matrix
-			// Apply necessary transformations to this boid
- glTranslatef(Boid_Location[i][0],Boid_Location[i][1],Boid_Location[i][2]);
+  int detail = 4; // How much detail to use when drawing the boids
+
+  glPushMatrix();        // Save current transformation matrix
+  // Apply necessary transformations to this boid
+  glTranslatef(Boid_Location[i][0],Boid_Location[i][1],Boid_Location[i][2]);
  
- float x = Boid_Velocity[i][0];
- float y = Boid_Velocity[i][1];
- float z = Boid_Velocity[i][2];
- float rho = sqrt(x*x + y*y + z*z);
- float phi = acos(y/rho) * 180 / PI;
- float theta = atan2(x, z) * 180 / PI;
- glRotatef(theta, 0, 1, 0);
- glRotatef(phi-90, 1, 0, 0);
- //glTranslatef(25,0,0);
- glScalef(0.5,0.5,0.5);
- //glScalef(5,5,5);
+  // Make the boid face the proper direction
+  glRotatef(theta, 0, 1, 0);
+  glRotatef(phi-90, 1, 0, 0);
+  glScalef(0.5,0.5,0.5);
 
- glPushMatrix();
+  glPushMatrix();
   glScalef(1,2,4);
-  gluSphere(my_quad,1.0,detail,detail);	// Draw this boid
+  gluSphere(my_quad,1.0,detail,detail);
   glPopMatrix();
 
   glPushMatrix();
