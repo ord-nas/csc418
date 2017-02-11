@@ -867,6 +867,10 @@ void updateBoid(int i) {
   V3[0] /= num_nearby_boids;
   V3[1] /= num_nearby_boids;
   V3[2] /= num_nearby_boids;
+  // Now subtract out the current boid's velocity.
+  V3[0] -= Boid_Velocity[i][0];
+  V3[1] -= Boid_Velocity[i][1];
+  V3[2] -= Boid_Velocity[i][2];
   // Finally update the boid's velocity
   Boid_Velocity[i][0] += k_rule3 * V3[0];
   Boid_Velocity[i][1] += k_rule3 * V3[1];
