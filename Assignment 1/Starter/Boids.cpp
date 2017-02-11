@@ -867,7 +867,8 @@ void updateBoid(int i) {
   V3[0] /= num_nearby_boids;
   V3[1] /= num_nearby_boids;
   V3[2] /= num_nearby_boids;
-  // Now subtract out the current boid's velocity.
+  // Now subtract out the current boid's velocity. This is to conform to the
+  // announcement on Portal posted on February 9th.
   V3[0] -= Boid_Velocity[i][0];
   V3[1] -= Boid_Velocity[i][1];
   V3[2] -= Boid_Velocity[i][2];
