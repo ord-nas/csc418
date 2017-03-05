@@ -119,6 +119,47 @@ GLfloat Pba;
 GLfloat Pbc;
 GLfloat Pbd;
 
+// Leaf points
+float leaf_points[][2] = {
+  {60,12},
+  {40,20},
+  {22,42},
+  {30,40},
+  {18,68},
+  {27,65},
+  {20,100},
+  {30,95},
+  {30,120},
+  {35,115},
+  {40,138},
+  {45,130},
+  {50,145},
+  {55,138},
+  {62,155},
+  {67,145},
+  {75,164},
+  {78,155},
+  {88,172},
+  {92,150},
+  {95,155},
+  {98,140},
+  {102,145},
+  {105,128},
+  {110,130},
+  // {110,115},
+  // {113,118},
+  {113,106},
+  {117,110},
+  {110,85},
+  {117,87},
+  {105,68},
+  {110,68},
+  {98,48},
+  {104,49},
+  {84,28},
+  {90,28},
+  {80,17}};
+
 /******************************************************************************
   Function Prototypes
 *******************************************************************************/
@@ -309,10 +350,10 @@ void RenderPlant(struct PlantNode *p) {
   if (p==NULL) return;		// Avoid crash if called with empty node
 
   glPushMatrix();        // Save current transformation matrix
+  glRotatef(p->z_ang, 0, 0, 1);
+  glRotatef(p->x_ang, 1, 0, 0);
   switch (p->type) {
   case 'a':
-    glRotatef(p->z_ang, 0, 0, 1);
-    glRotatef(p->x_ang, 1, 0, 0);
     glColor4f(1.0,0.0,0.0,1.0);
     StemSection();
     glTranslatef(0.0,0.0,1.0);
@@ -322,8 +363,6 @@ void RenderPlant(struct PlantNode *p) {
     RenderPlant(p->right);
     break;    
   case 'b':
-    glRotatef(p->z_ang, 0, 0, 1);
-    glRotatef(p->x_ang, 1, 0, 0);
     glColor4f(0.0,1.0,0.0,1.0);
     StemSection();
     glTranslatef(0.0,0.0,1.0);
@@ -334,12 +373,11 @@ void RenderPlant(struct PlantNode *p) {
     break;
   case 'c':
   case 'd':
-    glRotatef(p->z_ang, 0, 0, 1);
-    glRotatef(p->x_ang, 1, 0, 0);
     glColor4f(0.0,0.0,1.0,1.0);
-    StemSection();
-    glTranslatef(0.0,0.0,1.0);
-    BulbSection();
+    //StemSection();
+    //glTranslatef(0.0,0.0,1.0);
+    //BulbSection();
+    LeafSection();
     break;
   default:
     printf("ERROR UNKNOWN SECTION TYPE: %c\n", p->type);
@@ -375,11 +413,13 @@ void StemSection(void) {
 }
 
 void LeafSection(void) {
+  glPushMatrix();        // Save current transformation matrix
+  
   // Draws a single leaf, along the current local Z axis
   // Note that we draw a little stem before the actual leaf.
-  glColor3f(.25,1,.1);
+  glColor3f(.25,1,.1); 
   StemSection();
-  // Perhaps you should translate now? :)
+  glTranslatef(0.0,0.0,1.0);
 
   ////////////////////////////////////////////////////////////
   // TO DO: Draw your own leaf design.
@@ -403,6 +443,33 @@ void LeafSection(void) {
   //        How to obtain the leaf's vertext coordinates?
   //        I use quadriculated paper...
   ////////////////////////////////////////////////////////////
+    
+  float origin_x = leaf_points[0][0];
+  float origin_z = leaf_points[0][1];
+
+  int num_points = sizeof(leaf_points)/(2*sizeof(float));
+  float tip_x = origin_x;
+  float tip_z = origin_z;
+  for (int i = 0; i < num_points; ++i) {
+    if (leaf_points[i][1] > tip_z) {
+      tip_x = leaf_points[i][0];
+      tip_z = leaf_points[i][1];
+    }
+  }
+  float angle = atan2(tip_x-origin_x, tip_z-origin_z) * 180 / PI;
+  float scale = 1.0 / 100.0;
+  glScalef(scale, scale, scale);
+  glRotatef(60, 1, 0, 0); // rotate the leaf away from the stem
+  glRotatef(angle, 0, -1, 0); // rotate so the leaf is straight
+  glBegin(GL_TRIANGLE_STRIP);
+  glNormal3d(0,1,0);
+  for (int i = 1; i < num_points; ++i) {
+    glVertex3f(leaf_points[i][0] - origin_x,
+	       0.0,
+	       leaf_points[i][1] - origin_z);
+    glVertex3f(0.0, 0.0, 0.0);
+  }
+  glEnd();
 
   ////////////////////////////////////////////////////////////
   // CRUNCHY: Use texture mapping to create nicer leaves!
@@ -440,6 +507,7 @@ void LeafSection(void) {
     glDisable (GL_BLEND);
   }
 
+  glPopMatrix();        // Save current transformation matrix
 }
 
 void FlowerSection() {
@@ -861,6 +929,8 @@ void WindowReshape(int w, int h) {
   // looking at (0,0,0) - the origin -, with the Z axis pointing upward
   gluPerspective(60,1,15,500);
   gluLookAt(200,200,200,0,0,50,0,0,1);
+  //gluLookAt(1,0,200,0,0,0,0,0,1);
+  //gluLookAt(1,200,0,0,0,0,0,0,1);
 
   // Update OpenGL viewport and internal variables
   glViewport(0,0, w,h);
@@ -1043,6 +1113,8 @@ void WindowDisplay(void) {
     glPopMatrix();
   }
 
+  //LeafSection();
+  
   setupUI();
   glFlush();
   glutSwapBuffers();
