@@ -45,6 +45,7 @@ Program Code V3.0: F. Estrada, Sep 2012.
 #include <string.h>
 #include <math.h>
 #include <unistd.h>
+#include <time.h>
 
 #define MAX_PLANTS 25		// Maximum number of plants for plant forests
 #define GRID_RESOLVE 64		// Size of the surface grid
@@ -142,6 +143,7 @@ void PrintPlant(struct PlantNode *p);
 void printNodeRecursive(struct PlantNode *p, int lev, int tgt);
 void RenderPlant(struct PlantNode *p);
 void StemSection();
+void BulbSection();
 void LeafSection();
 void FlowerSection();
 void AnimatedRenderPlant(void);
@@ -303,8 +305,59 @@ void RenderPlant(struct PlantNode *p) {
   //       else your plant will look 'dried up'.
   ////////////////////////////////////////////////////////////
 
+
   if (p==NULL) return;		// Avoid crash if called with empty node
+
+  glPushMatrix();        // Save current transformation matrix
+  switch (p->type) {
+  case 'a':
+    glRotatef(p->z_ang, 0, 0, 1);
+    glRotatef(p->x_ang, 1, 0, 0);
+    glColor4f(1.0,0.0,0.0,1.0);
+    StemSection();
+    glTranslatef(0.0,0.0,1.0);
+    BulbSection();
+    RenderPlant(p->left);
+    glRotatef(180, 0, 0, 1);
+    RenderPlant(p->right);
+    break;    
+  case 'b':
+    glRotatef(p->z_ang, 0, 0, 1);
+    glRotatef(p->x_ang, 1, 0, 0);
+    glColor4f(0.0,1.0,0.0,1.0);
+    StemSection();
+    glTranslatef(0.0,0.0,1.0);
+    BulbSection();
+    RenderPlant(p->left);
+    glRotatef(180, 0, 0, 1);
+    RenderPlant(p->right);
+    break;
+  case 'c':
+  case 'd':
+    glRotatef(p->z_ang, 0, 0, 1);
+    glRotatef(p->x_ang, 1, 0, 0);
+    glColor4f(0.0,0.0,1.0,1.0);
+    StemSection();
+    glTranslatef(0.0,0.0,1.0);
+    BulbSection();
+    break;
+  default:
+    printf("ERROR UNKNOWN SECTION TYPE: %c\n", p->type);
+    exit(1);
+  }
+  glPopMatrix();        // Save current transformation matrix
+
 }
+
+void BulbSection(void) {
+  GLUquadric *quadObject;
+  quadObject=gluNewQuadric();
+
+  gluSphere(quadObject,0.2,5,5);
+
+  // Destroy our quadrics object
+  gluDeleteQuadric(quadObject);
+}  
 
 void StemSection(void) {
   // Draws a single stem section, along the current local Z axis
@@ -627,6 +680,7 @@ void GenerateRecursivePlant(struct PlantNode *p, int level) {
 }
 
 int main(int argc, char** argv) {
+  //srand48(time(NULL));
   /*
     Parse input line parameters, enforce reasonable bounds on global variables
     and parameters for the L-system, and set up plant structures.
@@ -806,7 +860,7 @@ void WindowReshape(int w, int h) {
   // We will use perspective projection. The camera is at (100,100,100)
   // looking at (0,0,0) - the origin -, with the Z axis pointing upward
   gluPerspective(60,1,15,500);
-  gluLookAt(150,150,150,0,0,50,0,0,1);
+  gluLookAt(200,200,200,0,0,50,0,0,1);
 
   // Update OpenGL viewport and internal variables
   glViewport(0,0, w,h);
