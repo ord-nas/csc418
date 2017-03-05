@@ -109,6 +109,7 @@ GLint n_levels;       // Number of levels of branching in the plant
 GLint n_plants;	      // Number of plants in a plant forest in [1,MAX_PLANTS]
 
 // Transition probabilities for the L-system specification
+GLfloat Paaa;
 GLfloat Paab;
 GLfloat Paac;
 GLfloat Paad;
@@ -555,16 +556,37 @@ void GenerateRecursivePlant(struct PlantNode *p, int level) {
   if (level>=n_levels) return;             // Reached maximum plant height
   if (p->type=='c'||p->type=='d') return;  // c and d type nodes are terminal nodes as well
 
-  dice=drand48();           // Roll the dice...
+  dice=drand48();           // Roll the dice... 
   if (p->type=='a') {
-    /////////////////////////////////////////////////////////////
-    // TO DO: Complete this part, select a replacement rule for
-    //        this node based on the probabilities stated above
-    //        (also found in the handbook), and add the appropriate
-    //        nodes to the plant tree. This is implemented below
-    //        for 'b' type nodes, and you can look at that code
-    //        to give you an idea how the process works.
-    ///////////////////////////////////////////////////////////// 
+    // Generate a pair of nodes, one left and one right.
+    q=(struct PlantNode *)calloc(1,sizeof(struct PlantNode));
+    q->x_ang=drand48()*X_angle;
+    q->z_ang=drand48()*Z_angle;
+    q->scl=scale_mult;
+    q->left=NULL;
+    q->right=NULL;
+
+    r=(struct PlantNode *)calloc(1,sizeof(struct PlantNode));
+    r->x_ang=drand48()*X_angle;
+    r->z_ang=drand48()*Z_angle;
+    r->scl=scale_mult;
+    r->left=NULL;
+    r->right=NULL;
+
+    // Determine the types of the nodes based on the generation rules.
+    if (dice<=Paaa) {
+      r->type='a';
+      q->type='a';
+    } else if (dice<=(Paaa+Paab)) {
+      r->type='a';
+      q->type='b';
+    } else if (dice<=(Paaa+Paab+Paac)) {
+      r->type='a';
+      q->type='c';
+    } else {
+      r->type='a';
+      q->type='d';
+    }
   } else if (p->type=='b') {
     // Generate a single node for either left or right
     q=NULL;
@@ -611,8 +633,8 @@ int main(int argc, char** argv) {
   */
 
   // Process program arguments
-  if(argc != 15) {
-    printf("Usage: PlantLife n_plants n_levels X_angle Z_angle scale_mult Paab Paac Paad Pacd Pba Pbc Pbd width height\n");
+  if(argc != 16) {
+    printf("Usage: PlantLife n_plants n_levels X_angle Z_angle scale_mult Paaa Paab Paac Paad Pacd Pba Pbc Pbd width height\n");
     exit(1);
   } else {
     n_plants=atoi(argv[1]);
@@ -620,15 +642,16 @@ int main(int argc, char** argv) {
     X_angle=atof(argv[3]);
     Z_angle=atof(argv[4]);
     scale_mult=atof(argv[5]);
-    Paab=atof(argv[6]);
-    Paac=atof(argv[7]);
-    Paad=atof(argv[8]);
-    Pacd=atof(argv[9]);
-    Pba=atof(argv[10]);
-    Pbc=atof(argv[11]);
-    Pbd=atof(argv[12]);
-    Win[0] = atoi(argv[13]);
-    Win[1] = atoi(argv[14]);
+    Paaa=atof(argv[6]);
+    Paab=atof(argv[7]);
+    Paac=atof(argv[8]);
+    Paad=atof(argv[9]);
+    Pacd=atof(argv[10]);
+    Pba=atof(argv[11]);
+    Pbc=atof(argv[12]);
+    Pbd=atof(argv[13]);
+    Win[0] = atoi(argv[14]);
+    Win[1] = atoi(argv[15]);
 
     // Enforce bounds on input variables
     if (n_plants>=MAX_PLANTS) n_plants=MAX_PLANTS;
@@ -641,10 +664,11 @@ int main(int argc, char** argv) {
     if (Z_angle>360) Z_angle=360;
     if (scale_mult<.75) scale_mult=.75;
     if (scale_mult>.99) scale_mult=.99;
-    Paab=Paab/(Paab+Paac+Paad+Pacd);
-    Paac=Paac/(Paab+Paac+Paad+Pacd);
-    Paad=Paad/(Paab+Paac+Paad+Pacd);
-    Pacd=Pacd/(Paab+Paac+Paad+Pacd);
+    Paaa=Paaa/(Paaa+Paab+Paac+Paad+Pacd);
+    Paab=Paab/(Paaa+Paab+Paac+Paad+Pacd);
+    Paac=Paac/(Paaa+Paab+Paac+Paad+Pacd);
+    Paad=Paad/(Paaa+Paab+Paac+Paad+Pacd);
+    Pacd=Pacd/(Paaa+Paab+Paac+Paad+Pacd);
     Pba=Pba/(Pba+Pbc+Pbd);
     Pbc=Pbc/(Pba+Pbc+Pbd);
     Pbd=Pbd/(Pba+Pbc+Pbd);
@@ -696,8 +720,11 @@ int main(int argc, char** argv) {
   MakeSurfaceGrid();
 
   // Make a plant forest!
-  for (int i=0;i<n_plants;i++)
+  for (int i=0;i<n_plants;i++) {
     PlantForest[i]=MakePlant();
+    printf("Printing a plant!\n");
+    PrintPlant(PlantForest[i]);
+  }
 
   //////////////////////////////////////////////////////////////
   // TO DO: Set the locations of the plants in the plant forest
