@@ -84,7 +84,6 @@ struct PlantNode *PlantForest[MAX_PLANTS];	// Array of pointers for a plant fore
 GLfloat ForestXYZ[MAX_PLANTS][3];		// Location of plants in the forest as (x, y, z)
 GLfloat GroundXYZ[GRID_RESOLVE][GRID_RESOLVE][3];	// Array to store ground surface points as (x,y,z) points
 GLfloat GroundNormals[GRID_RESOLVE][GRID_RESOLVE][3];   // Array to hold normal vectors at vertices (will use normal to triangle
-bool set[GRID_RESOLVE][GRID_RESOLVE];
                                                         // defined by the vertices at [i][j], [i+1][j], and [i][j+1]
 ImVec4 clear_color = ImColor(0.1f,0.1f,0.1f,1.0f);
 
@@ -147,8 +146,6 @@ float leaf_points[][2] = {
   {102,145},
   {105,128},
   {110,130},
-  // {110,115},
-  // {113,118},
   {113,106},
   {117,110},
   {110,85},
@@ -259,8 +256,10 @@ void RenderSurfaceGrid(void) {
   /////////////////////////////////////////////////////////////////////////
 
   glColor3f(127/255.0,77/255.0,34/255.0);
-  
+
+  // Go across each row of the grid
   for (int i = 0; i < GRID_RESOLVE-1; ++i) {
+    // Each row is drawn as a triangle strip
     glBegin(GL_TRIANGLE_STRIP);
     for (int j = 0; j < GRID_RESOLVE; ++j) {
       glNormal3f(GroundNormals[i][j][0],
@@ -282,71 +281,57 @@ void RenderSurfaceGrid(void) {
 
 // Using algorithm/ideas from: http://www.playfuljs.com/realistic-terrain-in-130-lines/
 void SetSurfaceHeights(int scale) {
-  // Square split
-  printf("Square %d\n", scale);
+  // Square split - iterate over all squares at the given scale.
   for (int i = scale; i < GRID_RESOLVE; i+=2*scale) {
     for (int j = scale; j < GRID_RESOLVE; j+=2*scale) {
       // Average four points around this point
       int num_points = 0;
       if (i-scale >= 0 && j-scale >= 0) {
 	GroundXYZ[i][j][2] += GroundXYZ[i-scale][j-scale][2];
-	if (!set[i-scale][j-scale]) {printf("%d %d", i, j); exit(1); }
 	++num_points;
       }
       if (i-scale >= 0 && j+scale < GRID_RESOLVE) {
 	GroundXYZ[i][j][2] += GroundXYZ[i-scale][j+scale][2];
-	if (!set[i-scale][j+scale]) {printf("%d %d", i, j); exit(1); }
 	++num_points;
       }
       if (i+scale < GRID_RESOLVE && j-scale >= 0) {
 	GroundXYZ[i][j][2] += GroundXYZ[i+scale][j-scale][2];
-	if (!set[i+scale][j-scale]) {printf("%d %d", i, j); exit(1); }
 	++num_points;
       }
       if (i+scale < GRID_RESOLVE && j+scale < GRID_RESOLVE) {
 	GroundXYZ[i][j][2] += GroundXYZ[i+scale][j+scale][2];
-	if (!set[i+scale][j+scale]) {printf("%d %d", i, j); exit(1); }
 	++num_points;
       }
       GroundXYZ[i][j][2] /= num_points;
-      // Then add noise
+      // Then add noise, proportional to scale
       GroundXYZ[i][j][2] += drand48() * scale * 0.1;
-      printf("Set %d %d\n", i, j);
-      set[i][j] = true;
     }
   }
-  // Diamond split
-  printf("Diamond %d\n", scale);
-  bool even = true;
+  // Diamond split - iterate over all diamonds at the given scale.
+  bool even = true; // Keep track of whether our iteration count is even or odd.
   for (int i = 0; i < GRID_RESOLVE; i+=scale) {
     for (int j = (even ? scale : 0); j < GRID_RESOLVE; j+=2*scale) {
       // Average four points around this point
       int num_points = 0;
       if (i-scale >= 0) {
 	GroundXYZ[i][j][2] += GroundXYZ[i-scale][j][2];
-	if (!set[i-scale][j]) {printf("%d %d", i-scale, j-scale); exit(1); }
 	++num_points;
       }
       if (j-scale >= 0) {
 	GroundXYZ[i][j][2] += GroundXYZ[i][j-scale][2];
-	if (!set[i][j-scale]) {printf("%d %d", i-scale, j+scale); exit(1); }
 	++num_points;
       }
       if (i+scale < GRID_RESOLVE) {
 	GroundXYZ[i][j][2] += GroundXYZ[i+scale][j][2];
-	if (!set[i+scale][j]) {printf("%d %d", i+scale, j-scale); exit(1); }
 	++num_points;
       }
       if (j+scale < GRID_RESOLVE) {
 	GroundXYZ[i][j][2] += GroundXYZ[i][j+scale][2];
-	if (!set[i][j+scale]) {printf("%d %d", i+scale, j+scale); exit(1); }
 	++num_points;
       }
       GroundXYZ[i][j][2] /= num_points;
-      // Then add noise
+      // Then add noise, proportional to scale
       GroundXYZ[i][j][2] += drand48() * scale * 0.1;
-      printf("Set %d %d\n", i, j);
-      set[i][j] = true;
     }
     even = !even;
   }
@@ -389,30 +374,12 @@ void MakeSurfaceGrid(void) {
       GroundXYZ[i][j][0]=(-side*.5)+(i*(side/GRID_RESOLVE));
       GroundXYZ[i][j][1]=(-side*.5)+(j*(side/GRID_RESOLVE));
       GroundXYZ[i][j][2]=0; // Initialize to zero, then populate below
-      set[i][j] = false;
     }
   }
-  set[0][0] = true;
-  set[0][GRID_RESOLVE-1] = true;
-  set[GRID_RESOLVE-1][0] = true;
-  set[GRID_RESOLVE-1][GRID_RESOLVE-1] = true;
 
-  // Now set the surface heights
+  // Now set the surface heights using an iterative process
   for (int scale = GRID_RESOLVE / 2; scale >= 1; scale /= 2) {
     SetSurfaceHeights(scale);
-  }
-
-  for (int i = 0; i < GRID_RESOLVE; i++) {
-    for (int j = 0; j < GRID_RESOLVE; j++) {
-      printf("%f ", GroundXYZ[i][j][2]);
-    }
-    printf("\n");
-  }
-
-  for (int i = 0; i < GRID_RESOLVE; i++) {
-    for (int j = 0; j < GRID_RESOLVE; j++) {
-      if (!set[i][j]) printf("%d %d UNSET!\n", i, j);
-    }
   }
 
   // Compute normals at each vertex
@@ -485,7 +452,6 @@ void RenderPlant(struct PlantNode *p) {
   //       something at the end of these last-level stems,
   //       else your plant will look 'dried up'.
   ////////////////////////////////////////////////////////////
-
 
   if (p==NULL) {
     return;
@@ -589,10 +555,14 @@ void LeafSection(void) {
   //        How to obtain the leaf's vertext coordinates?
   //        I use quadriculated paper...
   ////////////////////////////////////////////////////////////
-    
+
+  // We use the 2d points stored in leaf_points (obtained by hand, by pasting a
+  // leaf picture onto graph paper) to draw our leaf.
+  
   float origin_x = leaf_points[0][0];
   float origin_z = leaf_points[0][1];
 
+  // Find the point at the tip of the leaf
   int num_points = sizeof(leaf_points)/(2*sizeof(float));
   float tip_x = origin_x;
   float tip_z = origin_z;
@@ -602,12 +572,18 @@ void LeafSection(void) {
       tip_z = leaf_points[i][1];
     }
   }
+
+  // Compute the rotation required so that the tip is directly above the origin.
   float angle = atan2(tip_x-origin_x, tip_z-origin_z) * 180 / PI;
+  // Scale down the leaf so it's a reasonable size
   float scale = 1.0 / 150.0;
   glScalef(scale, scale, scale);
   glColor3f(.25,1,.1); // Set the colour to green
   glRotatef(60, 1, 0, 0); // rotate the leaf away from the stem
   glRotatef(angle, 0, -1, 0); // rotate so the leaf is straight
+
+  // Draw the leaf as a bunch of triangles extending radially from the origin to
+  // pairs of adjacent points on the leaf edge.
   glBegin(GL_TRIANGLE_STRIP);
   glNormal3d(0,1,0);
   for (int i = 1; i < num_points; ++i) {
@@ -657,19 +633,30 @@ void LeafSection(void) {
   glPopMatrix();        // Save current transformation matrix
 }
 
+// Draw a petal
 void Petal() {
+  // This is based on the rose function, see: https://en.wikipedia.org/wiki/Rose_(mathematics)
   glColor3f(1.0,1.0,1.0);
   int num_points = 50;
   int k = 4;
+  // Compute theta range to draw only one petal
   float theta_range = PI / 2 / k;
   glBegin(GL_QUAD_STRIP);
+  // We will draw the petal as a bunch of quads. The first quad will draw the
+  // bottom of the petal (near the centre of the flower), and then each
+  // subsequent quad will be further from the centre.
   for (int i = 0; i <= num_points; ++i) {
     float theta = ((float)i / num_points) * theta_range - theta_range;
+    // Compute coordinates of the petal
     float x = cos(k*theta)*sin(theta);
     float length = cos(k*theta)*cos(theta);
+
+    // Now bend the petal backwards
     float z = sin(4.0/3.0*(length * (PI/2)));
     float y = length;
 
+    // Compute the normal by taking the derivative of the curve used to bend the
+    // petal.
     float norm_y = -cos(4.0/3.0*(length * (PI/2)));
     float norm_z = 1.0;
     float len=sqrt(norm_y*norm_y+norm_z*norm_z);
@@ -679,40 +666,10 @@ void Petal() {
     glNormal3f(0, norm_y, norm_z);
     glVertex3f(x, y, z);
     glVertex3f(-x, y, z);
-    //printf("theta: %f, len: %f\n", theta, length);
-    //printf("%f %f %f\n", x, y, z);
-    //printf("norm: %f %f %f\n", 0.0, norm_y, norm_z);
   }
   glEnd();
 
-  // Debugging code to draw the surface normals:
-  // glColor3f(1.0,1.0,0.0);
-  // int skip = 10;
-  // for (int i = 0; i <= num_points; ++i) {
-  //   float theta = ((float)i / num_points) * theta_range - theta_range;
-  //   float x = cos(k*theta)*sin(theta);
-  //   float length = cos(k*theta)*cos(theta);
-  //   float z = sin(4.0/3.0*(length * (PI/2)));
-  //   float y = length;
-
-  //   float norm_y = -cos(4.0/3.0*(length * (PI/2)));
-  //   float norm_z = 1.0;
-  //   float len=sqrt(norm_y*norm_y+norm_z*norm_z);
-  //   norm_y/=len;
-  //   norm_z/=len;
-
-  //   if (skip == 0) {
-  //     glBegin(GL_LINES);
-  //     glVertex3f(0, y, z);
-  //     glVertex3f(0, y+norm_y, z+norm_z);
-  //     glEnd();
-  //     skip = 10;
-  //   }
-  //   skip--;
-  // }
-
 }
-  
 
 void FlowerSection() {
   // Draws a flower perpendicular to the current local Z axis
@@ -989,7 +946,7 @@ void GenerateRecursivePlant(struct PlantNode *p, int level) {
 }
 
 int main(int argc, char** argv) {
-  //srand48(time(NULL));
+  srand48(time(NULL));
   /*
     Parse input line parameters, enforce reasonable bounds on global variables
     and parameters for the L-system, and set up plant structures.
@@ -1085,15 +1042,16 @@ int main(int argc, char** argv) {
   // Make a plant forest!
   for (int i=0;i<n_plants;i++) {
     PlantForest[i]=MakePlant();
-    printf("Printing a plant!\n");
-    PrintPlant(PlantForest[i]);
+    // printf("Printing a plant!\n");
+    // PrintPlant(PlantForest[i]);
+    // Set plant location
+    int x = int(drand48() * GRID_RESOLVE + 0.5);
+    int y = int(drand48() * GRID_RESOLVE + 0.5);
+    ForestXYZ[i][0] = GroundXYZ[x][y][0];
+    ForestXYZ[i][1] = GroundXYZ[x][y][1];
+    ForestXYZ[i][2] = GroundXYZ[x][y][2];
   }
 
-  //////////////////////////////////////////////////////////////
-  // TO DO: Set the locations of the plants in the plant forest
-  //        randomly in X,Y, but at the correct height for
-  //        the corresponding location in the surface grid.
-  //////////////////////////////////////////////////////////////
 
   // Intialize global transformation variables and GLUI    
   global_Z=0;
@@ -1205,8 +1163,7 @@ void setupUI() {
   ImGui::ColorEdit3("clear color", (float*)&clear_color);
 
   ImGui::SliderFloat("rotation", &global_Z, -180, 180);
-  // TODO FIX RANGE
-  ImGui::SliderFloat("scale", &global_scale, 0, 50);
+  ImGui::SliderFloat("scale", &global_scale, 0, 20);
 
   // Add "Quit" button
   if(ImGui::Button("Quit")) {
@@ -1358,10 +1315,6 @@ void WindowDisplay(void) {
     glPopMatrix();
   }
 
-  //glScalef(100,100,100);
-  //FlowerSection();
-  //LeafSection();
-  
   setupUI();
   glFlush();
   glutSwapBuffers();

@@ -2,8 +2,8 @@
 Assignment 2 Checklist/Grading sheet
 -------------------------------------
 
-Name: 
-Student ID:
+Name: Sandro Young
+Student ID: 999729566
 
 -----------------------------------------------------------------------------------------
 A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded otherwise!)
@@ -13,14 +13,14 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded oth
    Academic Honesty policy stated in 
    http://www.cs.toronto.edu/~ls/teaching08.html
 
-   ___Yes   ___No
+   _X__Yes   ___No
 
 
 2. I collaborated on this assignment with another student or borrowed code from another
    source (the penalties/grades will be assesed according to the policy stated in 
    http://www.cs.brown.edu/~ls/teaching08.html)
 
-   ___Yes   ___No
+   ___Yes   _X__No
 
    If you checked yes, please supply the following
 
@@ -39,18 +39,18 @@ B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FUL
    WE WILL BE ABLE TO MAKE AN ACCURATE ASSESSMENT
 
    
-___   (10 points) Part 2a     L-system implementation
+_X__   (10 points) Part 2a     L-system implementation
                   
-___   (10 points) Part 2b     Rendering of plants (including your leafs & flowers)
+_X__   (10 points) Part 2b     Rendering of plants (including your leafs & flowers)
 
-___   (2.5 points) Part 2c    GUI controls (for global variables)
+_X__   (2.5 points) Part 2c    GUI controls (for global variables)
 
-___   (15 points) Part 2d     Surface grid generation (including correct normals)
+_X__   (15 points) Part 2d     Surface grid generation (including correct normals)
                               and rendering (illumination must work properly)
                   
-___   (2.5 points) Part 2g    Checklist completed
+_X__   (2.5 points) Part 2g    Checklist completed
 
-___   (10 points)             Artistic merit - make it look good!
+_X__   (10 points)             Artistic merit - make it look good!
 
       Crunchy bonus part - Bonus depends on how good your extension actually is
 
@@ -65,3 +65,9 @@ Total for the Plant Life programming assignment:      / 50
 (any points above 50 will be applied to your written assignment mark)
 
 -------------------------------------------------------------------------------- 
+
+QUESTION: We don't have a translation component... WHY?
+
+Since the plant is drawn recursively, each plant part is just draw "on top" of
+its parent. We don't need to explicitly track translation because we can just
+push multiple translation/rotation matrices to track our position.
