@@ -378,8 +378,8 @@ void RenderPlant(struct PlantNode *p) {
     // StemSection();
     // glTranslatef(0.0,0.0,1.0);
     // BulbSection();
-    //LeafSection();
-    FlowerSection();
+    LeafSection();
+    //FlowerSection();
     break;
   default:
     printf("ERROR UNKNOWN SECTION TYPE: %c\n", p->type);
@@ -459,7 +459,7 @@ void LeafSection(void) {
     }
   }
   float angle = atan2(tip_x-origin_x, tip_z-origin_z) * 180 / PI;
-  float scale = 1.0 / 100.0;
+  float scale = 1.0 / 150.0;
   glScalef(scale, scale, scale);
   glRotatef(60, 1, 0, 0); // rotate the leaf away from the stem
   glRotatef(angle, 0, -1, 0); // rotate so the leaf is straight
@@ -517,15 +517,7 @@ void Petal() {
   int num_points = 50;
   int k = 4;
   float theta_range = PI / 2 / k;
-  float prev_x, prev_y, prev_z;
-  prev_x = prev_y = prev_z = 0.0;
-  // float angle = atan2(tip_x-origin_x, tip_z-origin_z) * 180 / PI;
-  // float scale = 1.0 / 100.0;
-  // glScalef(scale, scale, scale);
-  // glRotatef(60, 1, 0, 0); // rotate the leaf away from the stem
-  // glRotatef(angle, 0, -1, 0); // rotate so the leaf is straight
   glBegin(GL_QUAD_STRIP);
-  //glNormal3d(0,1,0);
   for (int i = 0; i <= num_points; ++i) {
     float theta = ((float)i / num_points) * theta_range - theta_range;
     float x = cos(k*theta)*sin(theta);
@@ -533,15 +525,6 @@ void Petal() {
     float z = sin(4.0/3.0*(length * (PI/2)));
     float y = length;
 
-    // compute normal
-    // TODO: is this right??
-    // float delta_x = prev_x - x;
-    // float delta_y = y - prev_y;
-    // float delta_z = z - prev_z;
-    // double norm_x = -delta_x;
-    // double norm_y = delta_y;
-    // double norm_z = delta_z;
-    // computeNormal(&norm_x, &norm_y, &norm_z, delta_x, delta_y, delta_z);
     float norm_y = -cos(4.0/3.0*(length * (PI/2)));
     float norm_z = 1.0;
     float len=sqrt(norm_y*norm_y+norm_z*norm_z);
@@ -549,18 +532,40 @@ void Petal() {
     norm_z/=len;
 
     glNormal3d(0, norm_y, norm_z);
-    //glNormal3d(0,-1,0);
     glVertex3f(x, y, z);
     glVertex3f(-x, y, z);
-    prev_x = x;
-    prev_y = y;
-    prev_z = z;
     //printf("theta: %f, len: %f\n", theta, length);
     //printf("%f %f %f\n", x, y, z);
     //printf("norm: %f %f %f\n", 0.0, norm_y, norm_z);
   }
   glEnd();
-  //exit(1);
+
+  // Debugging code to draw the surface normals:
+  // glColor3f(1.0,1.0,0.0);
+  // int skip = 10;
+  // for (int i = 0; i <= num_points; ++i) {
+  //   float theta = ((float)i / num_points) * theta_range - theta_range;
+  //   float x = cos(k*theta)*sin(theta);
+  //   float length = cos(k*theta)*cos(theta);
+  //   float z = sin(4.0/3.0*(length * (PI/2)));
+  //   float y = length;
+
+  //   float norm_y = -cos(4.0/3.0*(length * (PI/2)));
+  //   float norm_z = 1.0;
+  //   float len=sqrt(norm_y*norm_y+norm_z*norm_z);
+  //   norm_y/=len;
+  //   norm_z/=len;
+
+  //   if (skip == 0) {
+  //     glBegin(GL_LINES);
+  //     glVertex3f(0, y, z);
+  //     glVertex3f(0, y+norm_y, z+norm_z);
+  //     glEnd();
+  //     skip = 10;
+  //   }
+  //   skip--;
+  // }
+
 }
   
 
@@ -609,9 +614,11 @@ void FlowerSection() {
 
   // Draw stem before the flower
   glColor3f(.25,1,.1); 
-  // TODO: ADD ME BACK
-  // StemSection();
-  // glTranslatef(0.0,0.0,1.0);
+  StemSection();
+  glTranslatef(0.0,0.0,1.0);
+
+  // Shrink the flower a little bit
+  glScalef(0.5, 0.5, 0.5);
 
   // Draw petals
   int num_petals_per_layer = 8;
@@ -621,7 +628,6 @@ void FlowerSection() {
   for (int i = 0; i < num_petals_per_layer; ++i) {
     glPushMatrix();
     glRotatef(angle_per_petal * i, 0, 0, 1);
-    //glRotatef(85, 1, 0, 0);
     Petal();
     glPopMatrix();
   }
@@ -630,7 +636,6 @@ void FlowerSection() {
   for (int i = 0; i < num_petals_per_layer; ++i) {
     glPushMatrix();
     glRotatef(angle_per_petal * i - angle_per_petal / 3, 0, 0, 1);
-    //glRotatef(90, 1, 0, 0);
     glRotatef(10, 1, 0, 0);
     Petal();
     glPopMatrix();
@@ -640,7 +645,6 @@ void FlowerSection() {
   for (int i = 0; i < num_petals_per_layer; ++i) {
     glPushMatrix();
     glRotatef(angle_per_petal * i - (2.0/3.0 * angle_per_petal), 0, 0, 1);
-    //glRotatef(95, 1, 0, 0);
     glRotatef(20, 1, 0, 0);
     Petal();
     glPopMatrix();
@@ -1055,6 +1059,10 @@ void setupUI() {
 
   ImGui::SetWindowFocus();
   ImGui::ColorEdit3("clear color", (float*)&clear_color);
+
+  ImGui::SliderFloat("rotation", &global_Z, -180, 180);
+  // TODO FIX RANGE
+  ImGui::SliderFloat("scale", &global_scale, 0, 50);
 
   // Add "Quit" button
   if(ImGui::Button("Quit")) {
