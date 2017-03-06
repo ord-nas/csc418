@@ -348,44 +348,46 @@ void RenderPlant(struct PlantNode *p) {
   ////////////////////////////////////////////////////////////
 
 
-  if (p==NULL) return;		// Avoid crash if called with empty node
+  if (p==NULL) {
+    return;
+  }
 
   glPushMatrix();        // Save current transformation matrix
+  // Rotate about the stem
   glRotatef(p->z_ang, 0, 0, 1);
   glRotatef(p->x_ang, 1, 0, 0);
+
+  // Now check what type of node this is, and draw it
   switch (p->type) {
   case 'a':
-    glColor4f(1.0,0.0,0.0,1.0);
-    StemSection();
-    glTranslatef(0.0,0.0,1.0);
-    //BulbSection();
-    RenderPlant(p->left);
-    glRotatef(180, 0, 0, 1);
-    RenderPlant(p->right);
-    break;    
   case 'b':
-    glColor4f(0.0,1.0,0.0,1.0);
     StemSection();
+    // Now move up the stem
     glTranslatef(0.0,0.0,1.0);
-    //BulbSection();
-    RenderPlant(p->left);
-    glRotatef(180, 0, 0, 1);
-    RenderPlant(p->right);
-    break;
+    // If this stem has no children, then just draw a small bulb at the end of
+    // the stem.
+    if (!p->left && !p->right) {
+      BulbSection();
+    } else {
+      // Draw the left child
+      RenderPlant(p->left);
+      // Now flip 180 degrees and draw the right child
+      glRotatef(180, 0, 0, 1);
+      RenderPlant(p->right);
+    }
+    break;    
   case 'c':
-  case 'd':
-    // glColor4f(0.0,0.0,1.0,1.0);
-    // StemSection();
-    // glTranslatef(0.0,0.0,1.0);
-    // BulbSection();
     LeafSection();
-    //FlowerSection();
+    break;
+  case 'd':
+    FlowerSection();
     break;
   default:
     printf("ERROR UNKNOWN SECTION TYPE: %c\n", p->type);
     exit(1);
   }
-  glPopMatrix();        // Save current transformation matrix
+  
+  glPopMatrix();        // Restore the previous transformation matrix
 
 }
 
@@ -393,11 +395,13 @@ void BulbSection(void) {
   GLUquadric *quadObject;
   quadObject=gluNewQuadric();
 
-  gluSphere(quadObject,0.2,5,5);
+  // Make the colour dark green
+  glColor3f(80/255.0,127/255.0,37/255.0); 
+  gluSphere(quadObject,0.1,5,5);
 
   // Destroy our quadrics object
   gluDeleteQuadric(quadObject);
-}  
+}
 
 void StemSection(void) {
   // Draws a single stem section, along the current local Z axis
@@ -408,6 +412,8 @@ void StemSection(void) {
   GLUquadric *quadObject;
   quadObject=gluNewQuadric();
 
+  // Make the colour dark green
+  glColor3f(80/255.0,127/255.0,37/255.0); 
   gluCylinder(quadObject,.05,.04,1,10,10);
 
   // Destroy our quadrics object
@@ -419,7 +425,6 @@ void LeafSection(void) {
   
   // Draws a single leaf, along the current local Z axis
   // Note that we draw a little stem before the actual leaf.
-  glColor3f(.25,1,.1); 
   StemSection();
   glTranslatef(0.0,0.0,1.0);
 
@@ -461,6 +466,7 @@ void LeafSection(void) {
   float angle = atan2(tip_x-origin_x, tip_z-origin_z) * 180 / PI;
   float scale = 1.0 / 150.0;
   glScalef(scale, scale, scale);
+  glColor3f(.25,1,.1); // Set the colour to green
   glRotatef(60, 1, 0, 0); // rotate the leaf away from the stem
   glRotatef(angle, 0, -1, 0); // rotate so the leaf is straight
   glBegin(GL_TRIANGLE_STRIP);
@@ -613,7 +619,6 @@ void FlowerSection() {
   /////////////////////////////////////////////////////////////
 
   // Draw stem before the flower
-  glColor3f(.25,1,.1); 
   StemSection();
   glTranslatef(0.0,0.0,1.0);
 
