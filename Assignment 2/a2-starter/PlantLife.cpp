@@ -48,7 +48,7 @@ Program Code V3.0: F. Estrada, Sep 2012.
 #include <time.h>
 
 #define MAX_PLANTS 25		// Maximum number of plants for plant forests
-#define GRID_RESOLVE 64		// Size of the surface grid
+#define GRID_RESOLVE 65		// Size of the surface grid
 /******************************************************************************
   Data structures section
 *******************************************************************************/
@@ -84,6 +84,7 @@ struct PlantNode *PlantForest[MAX_PLANTS];	// Array of pointers for a plant fore
 GLfloat ForestXYZ[MAX_PLANTS][3];		// Location of plants in the forest as (x, y, z)
 GLfloat GroundXYZ[GRID_RESOLVE][GRID_RESOLVE][3];	// Array to store ground surface points as (x,y,z) points
 GLfloat GroundNormals[GRID_RESOLVE][GRID_RESOLVE][3];   // Array to hold normal vectors at vertices (will use normal to triangle
+bool set[GRID_RESOLVE][GRID_RESOLVE];
                                                         // defined by the vertices at [i][j], [i+1][j], and [i][j+1]
 ImVec4 clear_color = ImColor(0.1f,0.1f,0.1f,1.0f);
 
@@ -191,6 +192,7 @@ void Petal();
 void AnimatedRenderPlant(void);
 
 // Surface generation
+void SetSurfaceHeights(int scale);
 void MakeSurfaceGrid(void);
 void RenderSurfaceGrid(void);
 void computeNormal(double *vx, double *vy, double *vz, double wx, double wy, double wz);
@@ -255,6 +257,99 @@ void RenderSurfaceGrid(void) {
   //       Don't forget to specify the normal at each vertex. Otherwise
   //       your surface won't be properly illuminated
   /////////////////////////////////////////////////////////////////////////
+
+  glColor3f(127/255.0,77/255.0,34/255.0);
+  
+  for (int i = 0; i < GRID_RESOLVE-1; ++i) {
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int j = 0; j < GRID_RESOLVE; ++j) {
+      glNormal3f(GroundNormals[i][j][0],
+		 GroundNormals[i][j][1],
+		 GroundNormals[i][j][2]);
+      glVertex3f(GroundXYZ[i][j][0],
+		 GroundXYZ[i][j][1],
+		 GroundXYZ[i][j][2]);
+      glNormal3f(GroundNormals[i+1][j][0],
+		 GroundNormals[i+1][j][1],
+		 GroundNormals[i+1][j][2]);
+      glVertex3f(GroundXYZ[i+1][j][0],
+		 GroundXYZ[i+1][j][1],
+		 GroundXYZ[i+1][j][2]);
+    }
+    glEnd();
+  }
+}
+
+// Using algorithm/ideas from: http://www.playfuljs.com/realistic-terrain-in-130-lines/
+void SetSurfaceHeights(int scale) {
+  // Square split
+  printf("Square %d\n", scale);
+  for (int i = scale; i < GRID_RESOLVE; i+=2*scale) {
+    for (int j = scale; j < GRID_RESOLVE; j+=2*scale) {
+      // Average four points around this point
+      int num_points = 0;
+      if (i-scale >= 0 && j-scale >= 0) {
+	GroundXYZ[i][j][2] += GroundXYZ[i-scale][j-scale][2];
+	if (!set[i-scale][j-scale]) {printf("%d %d", i, j); exit(1); }
+	++num_points;
+      }
+      if (i-scale >= 0 && j+scale < GRID_RESOLVE) {
+	GroundXYZ[i][j][2] += GroundXYZ[i-scale][j+scale][2];
+	if (!set[i-scale][j+scale]) {printf("%d %d", i, j); exit(1); }
+	++num_points;
+      }
+      if (i+scale < GRID_RESOLVE && j-scale >= 0) {
+	GroundXYZ[i][j][2] += GroundXYZ[i+scale][j-scale][2];
+	if (!set[i+scale][j-scale]) {printf("%d %d", i, j); exit(1); }
+	++num_points;
+      }
+      if (i+scale < GRID_RESOLVE && j+scale < GRID_RESOLVE) {
+	GroundXYZ[i][j][2] += GroundXYZ[i+scale][j+scale][2];
+	if (!set[i+scale][j+scale]) {printf("%d %d", i, j); exit(1); }
+	++num_points;
+      }
+      GroundXYZ[i][j][2] /= num_points;
+      // Then add noise
+      GroundXYZ[i][j][2] += drand48() * scale * 0.1;
+      printf("Set %d %d\n", i, j);
+      set[i][j] = true;
+    }
+  }
+  // Diamond split
+  printf("Diamond %d\n", scale);
+  bool even = true;
+  for (int i = 0; i < GRID_RESOLVE; i+=scale) {
+    for (int j = (even ? scale : 0); j < GRID_RESOLVE; j+=2*scale) {
+      // Average four points around this point
+      int num_points = 0;
+      if (i-scale >= 0) {
+	GroundXYZ[i][j][2] += GroundXYZ[i-scale][j][2];
+	if (!set[i-scale][j]) {printf("%d %d", i-scale, j-scale); exit(1); }
+	++num_points;
+      }
+      if (j-scale >= 0) {
+	GroundXYZ[i][j][2] += GroundXYZ[i][j-scale][2];
+	if (!set[i][j-scale]) {printf("%d %d", i-scale, j+scale); exit(1); }
+	++num_points;
+      }
+      if (i+scale < GRID_RESOLVE) {
+	GroundXYZ[i][j][2] += GroundXYZ[i+scale][j][2];
+	if (!set[i+scale][j]) {printf("%d %d", i+scale, j-scale); exit(1); }
+	++num_points;
+      }
+      if (j+scale < GRID_RESOLVE) {
+	GroundXYZ[i][j][2] += GroundXYZ[i][j+scale][2];
+	if (!set[i][j+scale]) {printf("%d %d", i+scale, j+scale); exit(1); }
+	++num_points;
+      }
+      GroundXYZ[i][j][2] /= num_points;
+      // Then add noise
+      GroundXYZ[i][j][2] += drand48() * scale * 0.1;
+      printf("Set %d %d\n", i, j);
+      set[i][j] = true;
+    }
+    even = !even;
+  }
 }
 
 void MakeSurfaceGrid(void) {
@@ -289,12 +384,36 @@ void MakeSurfaceGrid(void) {
   // Assign surface heights
   side=15;				// Width of the surface - X and Y coordinates
 					// will have values in [-side/2, side/2]
-  for (int i=0; i<GRID_RESOLVE; i++)
+  for (int i=0; i<GRID_RESOLVE; i++) {
     for (int j=0; j<GRID_RESOLVE; j++) {
       GroundXYZ[i][j][0]=(-side*.5)+(i*(side/GRID_RESOLVE));
       GroundXYZ[i][j][1]=(-side*.5)+(j*(side/GRID_RESOLVE));
-      GroundXYZ[i][j][2]=0;	// <----- HERE you must define surface height in some smart way!
+      GroundXYZ[i][j][2]=0; // Initialize to zero, then populate below
+      set[i][j] = false;
     }
+  }
+  set[0][0] = true;
+  set[0][GRID_RESOLVE-1] = true;
+  set[GRID_RESOLVE-1][0] = true;
+  set[GRID_RESOLVE-1][GRID_RESOLVE-1] = true;
+
+  // Now set the surface heights
+  for (int scale = GRID_RESOLVE / 2; scale >= 1; scale /= 2) {
+    SetSurfaceHeights(scale);
+  }
+
+  for (int i = 0; i < GRID_RESOLVE; i++) {
+    for (int j = 0; j < GRID_RESOLVE; j++) {
+      printf("%f ", GroundXYZ[i][j][2]);
+    }
+    printf("\n");
+  }
+
+  for (int i = 0; i < GRID_RESOLVE; i++) {
+    for (int j = 0; j < GRID_RESOLVE; j++) {
+      if (!set[i][j]) printf("%d %d UNSET!\n", i, j);
+    }
+  }
 
   // Compute normals at each vertex
   // Remember we talked about how to compute the normal for a triangle in lecture. You
@@ -306,14 +425,34 @@ void MakeSurfaceGrid(void) {
   for (int i=0; i<GRID_RESOLVE; i++)
     for (int j=0; j<GRID_RESOLVE; j++) {
       // Obtain two vectors on the surface the point at GroundXYZ[i][j][] is located
+      if (i < GRID_RESOLVE-1) {
+	vx = GroundXYZ[i+1][j][0] - GroundXYZ[i][j][0];
+	vy = GroundXYZ[i+1][j][1] - GroundXYZ[i][j][1];
+	vz = GroundXYZ[i+1][j][2] - GroundXYZ[i][j][2];
+      } else {
+	vx = GroundXYZ[i][j][0] - GroundXYZ[i-1][j][0];
+	vy = GroundXYZ[i][j][1] - GroundXYZ[i-1][j][1];
+	vz = GroundXYZ[i][j][2] - GroundXYZ[i-1][j][2];
+      }
+
+      if (j < GRID_RESOLVE-1) {
+	wx = GroundXYZ[i][j+1][0] - GroundXYZ[i][j][0];
+	wy = GroundXYZ[i][j+1][1] - GroundXYZ[i][j][1];
+	wz = GroundXYZ[i][j+1][2] - GroundXYZ[i][j][2];
+      } else {
+	wx = GroundXYZ[i][j][0] - GroundXYZ[i][j-1][0];
+	wy = GroundXYZ[i][j][1] - GroundXYZ[i][j-1][1];
+	wz = GroundXYZ[i][j][2] - GroundXYZ[i][j-1][2];
+      }
+
 
       // Then compute the normal
       computeNormal(&vx,&vy,&vz,wx,wy,wz);
 
       // And store it...
-      GroundNormals[i][j][0]=0;    // <----- HEY!
-      GroundNormals[i][j][1]=0;    // <----- REPLACE THESE COMPONENTS with the correct
-      GroundNormals[i][j][2]=1;    // <----- normal for your surface!
+      GroundNormals[i][j][0]=vx;
+      GroundNormals[i][j][1]=vy;
+      GroundNormals[i][j][2]=vz;
     }
 }
 
@@ -537,7 +676,7 @@ void Petal() {
     norm_y/=len;
     norm_z/=len;
 
-    glNormal3d(0, norm_y, norm_z);
+    glNormal3f(0, norm_y, norm_z);
     glVertex3f(x, y, z);
     glVertex3f(-x, y, z);
     //printf("theta: %f, len: %f\n", theta, length);
