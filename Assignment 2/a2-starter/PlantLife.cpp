@@ -187,6 +187,7 @@ void StemSection();
 void BulbSection();
 void LeafSection();
 void FlowerSection();
+void Petal();
 void AnimatedRenderPlant(void);
 
 // Surface generation
@@ -357,7 +358,7 @@ void RenderPlant(struct PlantNode *p) {
     glColor4f(1.0,0.0,0.0,1.0);
     StemSection();
     glTranslatef(0.0,0.0,1.0);
-    BulbSection();
+    //BulbSection();
     RenderPlant(p->left);
     glRotatef(180, 0, 0, 1);
     RenderPlant(p->right);
@@ -366,18 +367,19 @@ void RenderPlant(struct PlantNode *p) {
     glColor4f(0.0,1.0,0.0,1.0);
     StemSection();
     glTranslatef(0.0,0.0,1.0);
-    BulbSection();
+    //BulbSection();
     RenderPlant(p->left);
     glRotatef(180, 0, 0, 1);
     RenderPlant(p->right);
     break;
   case 'c':
   case 'd':
-    glColor4f(0.0,0.0,1.0,1.0);
-    //StemSection();
-    //glTranslatef(0.0,0.0,1.0);
-    //BulbSection();
-    LeafSection();
+    // glColor4f(0.0,0.0,1.0,1.0);
+    // StemSection();
+    // glTranslatef(0.0,0.0,1.0);
+    // BulbSection();
+    //LeafSection();
+    FlowerSection();
     break;
   default:
     printf("ERROR UNKNOWN SECTION TYPE: %c\n", p->type);
@@ -510,6 +512,58 @@ void LeafSection(void) {
   glPopMatrix();        // Save current transformation matrix
 }
 
+void Petal() {
+  glColor3f(1.0,1.0,1.0);
+  int num_points = 50;
+  int k = 4;
+  float theta_range = PI / 2 / k;
+  float prev_x, prev_y, prev_z;
+  prev_x = prev_y = prev_z = 0.0;
+  // float angle = atan2(tip_x-origin_x, tip_z-origin_z) * 180 / PI;
+  // float scale = 1.0 / 100.0;
+  // glScalef(scale, scale, scale);
+  // glRotatef(60, 1, 0, 0); // rotate the leaf away from the stem
+  // glRotatef(angle, 0, -1, 0); // rotate so the leaf is straight
+  glBegin(GL_QUAD_STRIP);
+  //glNormal3d(0,1,0);
+  for (int i = 0; i <= num_points; ++i) {
+    float theta = ((float)i / num_points) * theta_range - theta_range;
+    float x = cos(k*theta)*sin(theta);
+    float length = cos(k*theta)*cos(theta);
+    float z = sin(4.0/3.0*(length * (PI/2)));
+    float y = length;
+
+    // compute normal
+    // TODO: is this right??
+    // float delta_x = prev_x - x;
+    // float delta_y = y - prev_y;
+    // float delta_z = z - prev_z;
+    // double norm_x = -delta_x;
+    // double norm_y = delta_y;
+    // double norm_z = delta_z;
+    // computeNormal(&norm_x, &norm_y, &norm_z, delta_x, delta_y, delta_z);
+    float norm_y = -cos(4.0/3.0*(length * (PI/2)));
+    float norm_z = 1.0;
+    float len=sqrt(norm_y*norm_y+norm_z*norm_z);
+    norm_y/=len;
+    norm_z/=len;
+
+    glNormal3d(0, norm_y, norm_z);
+    //glNormal3d(0,-1,0);
+    glVertex3f(x, y, z);
+    glVertex3f(-x, y, z);
+    prev_x = x;
+    prev_y = y;
+    prev_z = z;
+    //printf("theta: %f, len: %f\n", theta, length);
+    //printf("%f %f %f\n", x, y, z);
+    //printf("norm: %f %f %f\n", 0.0, norm_y, norm_z);
+  }
+  glEnd();
+  //exit(1);
+}
+  
+
 void FlowerSection() {
   // Draws a flower perpendicular to the current local Z axis
 
@@ -552,6 +606,45 @@ void FlowerSection() {
   /////////////////////////////////////////////////////////////
   // DO YOUR DRAWING WORK HERE!!
   /////////////////////////////////////////////////////////////
+
+  // Draw stem before the flower
+  glColor3f(.25,1,.1); 
+  // TODO: ADD ME BACK
+  // StemSection();
+  // glTranslatef(0.0,0.0,1.0);
+
+  // Draw petals
+  int num_petals_per_layer = 8;
+  float angle_per_petal = 360.0 / num_petals_per_layer;
+
+  // Layer 1 petals
+  for (int i = 0; i < num_petals_per_layer; ++i) {
+    glPushMatrix();
+    glRotatef(angle_per_petal * i, 0, 0, 1);
+    //glRotatef(85, 1, 0, 0);
+    Petal();
+    glPopMatrix();
+  }
+
+  // Layer 2 petals
+  for (int i = 0; i < num_petals_per_layer; ++i) {
+    glPushMatrix();
+    glRotatef(angle_per_petal * i - angle_per_petal / 3, 0, 0, 1);
+    //glRotatef(90, 1, 0, 0);
+    glRotatef(10, 1, 0, 0);
+    Petal();
+    glPopMatrix();
+  }
+
+  // Layer 3 petals
+  for (int i = 0; i < num_petals_per_layer; ++i) {
+    glPushMatrix();
+    glRotatef(angle_per_petal * i - (2.0/3.0 * angle_per_petal), 0, 0, 1);
+    //glRotatef(95, 1, 0, 0);
+    glRotatef(20, 1, 0, 0);
+    Petal();
+    glPopMatrix();
+  }
 
   // Disable texture mapping
   if (textures_on) {
@@ -1113,6 +1206,8 @@ void WindowDisplay(void) {
     glPopMatrix();
   }
 
+  //glScalef(100,100,100);
+  //FlowerSection();
   //LeafSection();
   
   setupUI();
