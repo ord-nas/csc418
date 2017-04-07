@@ -207,6 +207,42 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
   ///////////////////////////////////////////////////////
 }
 
+// Inverts the given 3x3 matrix in place. Returns true on success, false
+// otherwise.
+bool invert3x3Mat(float mat[3][3]) {
+  float *U, *s, *V, *rv1;
+  int singFlag, i;
+
+  // Invert the affine transform
+  U=NULL;
+  s=NULL;
+  V=NULL;
+  rv1=NULL;
+  singFlag=0;
+
+  SVD(&mat[0][0],3,3,&U,&s,&V,&rv1);
+  if (U==NULL||s==NULL||V==NULL) {
+    // Can't invert!
+    return false;
+  }
+
+  // Check for singular matrices...
+  for (i=0;i<3;i++) if (*(s+i)<1e-9) singFlag=1;
+  if (singFlag) {
+    // Can't invert!
+    return false;
+  }
+
+  // Compute and store inverse matrix
+  InvertMatrix(U,s,V,3,&mat[0][0]);
+
+  free(U);
+  free(s);
+  free(V);
+
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   // Main function for the raytracer. Parses input parameters,
   // sets up the initial blank image, and calls the functions
@@ -381,8 +417,8 @@ int main(int argc, char *argv[]) {
 	rgbIm[3*sx*j + 3*i + 0] = best_obj->col.R * 255 + 0.5;
 	rgbIm[3*sx*j + 3*i + 1] = best_obj->col.G * 255 + 0.5;
 	rgbIm[3*sx*j + 3*i + 2] = best_obj->col.B * 255 + 0.5;
-	printf("GOT INTERSECTION! %f %f %f\n", best_obj->col.R,
-	       best_obj->col.G, best_obj->col.B);
+	//printf("GOT INTERSECTION! %f %f %f\n", best_obj->col.R,
+	//c       best_obj->col.G, best_obj->col.B);
       }
       
       free(ray);

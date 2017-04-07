@@ -171,7 +171,39 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   /////////////////////////////////
   // TO DO: Complete this function.
   /////////////////////////////////
-  *lambda = INFINITY;
+  
+  // The plane is defined by the following vertices (CCW)
+  // (1,1,0), (-1,1,0), (-1,-1,0), (1,-1,0)
+  // With normal vector (0,0,1) (i.e. parallel to the XY plane)
+
+  // Transform the ray to canonical coordinates.
+  struct ray3D t_ray = *ray;
+  rayTransform(ray, &t_ray, plane);
+  
+  // Build a matrix to hold the linear system we want to solve.
+  float A[3][3];
+  A[0][0] = 1 - (-1);
+  A[0][1] = 1 - (1);
+  A[0][2] = t_ray.d.px;
+  A[1][0] = 1 - (1);
+  A[1][1] = 1 - (-1);
+  A[1][2] = t_ray.d.py;
+  A[2][0] = 0 - (0);
+  A[2][1] = 0 - (0);
+  A[2][2] = t_ray.d.pz;
+  bool success = invert3x3Mat(A);
+  if (!success) {
+    *lambda = INFINITY;
+  } else {
+    double beta = A[0][0] * (1 - t_ray.p0.px) + A[0][1] * (1 - t_ray.p0.py) + A[0][2] * (1 - t_ray.p0.pz);
+    double gamma = A[1][0] * (1 - t_ray.p0.px) + A[1][1] * (1 - t_ray.p0.py) + A[1][2] * (1 - t_ray.p0.pz);
+    double t = A[2][0] * (1 - t_ray.p0.px) + A[2][1] * (1 - t_ray.p0.py) + A[2][2] * (1 - t_ray.p0.pz);
+    if (beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && t > 0) {
+      *lambda = t;
+    } else {
+      *lambda = INFINITY;
+    }
+  }
 }
 
 void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
