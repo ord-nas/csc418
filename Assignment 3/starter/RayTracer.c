@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
   //        *interesting* scene.
   ///////////////////////////////////////////////////
   buildScene();          // Create a scene. This defines all the
-  // objects in the world of the raytracer
+                         // objects in the world of the raytracer
 
   //////////////////////////////////////////
   // TO DO: For Assignment 3 you can use the setup
@@ -308,7 +308,7 @@ int main(int argc, char *argv[]) {
   cam=setupView(&e, &g, &up, -3, -2, 2, 4);
 
   if (cam==NULL) {
-    fprintf(stderr,"Unable to set up the view and camera parameters. Our of memory!\n");
+    fprintf(stderr,"Unable to set up the view and camera parameters. Out of memory!\n");
     cleanup(object_list,light_list);
     deleteImage(im);
     exit(0);
@@ -329,8 +329,8 @@ int main(int argc, char *argv[]) {
   //        overall procedure of raytracing for a single
   //        pixel.
   //////////////////////////////////////////////////////
-  du=cam->wsize/(sx-1);          // du and dv. In the notes in terms of wl and wr, wt and wb,
-  dv=-cam->wsize/(sx-1);         // here we use wl, wt, and wsize. du=dv since the image is
+  du=cam->wsize/(sx);          // du and dv. In the notes in terms of wl and wr, wt and wb,
+  dv=-cam->wsize/(sx);         // here we use wl, wt, and wsize. du=dv since the image is
   // and dv is negative since y increases downward in pixel
   // coordinates and upward in camera coordinates.
 
@@ -351,7 +351,41 @@ int main(int argc, char *argv[]) {
       // TO DO - complete the code that should be in this loop to do the
       //         raytracing!
       ///////////////////////////////////////////////////////////////////
+      double u = cam->wl + du * (i + 0.5);
+      double v = cam->wt + dv * (j + 0.5);
+      struct point3D d;
+      d.px = u;
+      d.py = v;
+      d.pz = cam->f;
+      d.pw = 0;
+      // Transform d into world coordinates
+      matVecMult(cam->C2W, &d);
+      // Ray in world coordinates
+      struct ray3D* ray = newRay(&(cam->e), &d);
 
+      // Now intersect it with all the objects
+      struct object3D* current = object_list;
+      double best_lambda = INFINITY;
+      struct object3D* best_obj = NULL;
+      while (current != NULL) {
+	double lambda;
+	current->intersect(current, ray, &lambda, NULL, NULL, NULL, NULL);
+	if (!isinf(lambda) && lambda < best_lambda) {
+	  best_lambda = lambda;
+	  best_obj = current;
+	}
+	current = current->next;
+      }
+
+      if (best_obj) {
+	rgbIm[3*sx*j + 3*i + 0] = best_obj->col.R * 255 + 0.5;
+	rgbIm[3*sx*j + 3*i + 1] = best_obj->col.G * 255 + 0.5;
+	rgbIm[3*sx*j + 3*i + 2] = best_obj->col.B * 255 + 0.5;
+	printf("GOT INTERSECTION! %f %f %f\n", best_obj->col.R,
+	       best_obj->col.G, best_obj->col.B);
+      }
+      
+      free(ray);
     } // end for i
   } // end for j
 

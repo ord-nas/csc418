@@ -8,6 +8,7 @@
 */
 
 #include "utils.h"
+#include <math.h>
 
 // A useful 4x4 identity matrix which can be used at any point to
 // initialize or reset object transformations
@@ -65,6 +66,10 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
   ///////////////////////////////////////////
   // TO DO: Complete this function
   ///////////////////////////////////////////
+  ray_transformed->p0 = ray_orig->p0;
+  matVecMult(obj->Tinv, &(ray_transformed->p0));
+  ray_transformed->d = ray_orig->d;
+  matVecMult(obj->Tinv, &(ray_transformed->d));
 }
 
 inline void normalTransform(struct point3D *n_orig, struct point3D *n_transformed, struct object3D *obj) {
@@ -166,6 +171,7 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   /////////////////////////////////
   // TO DO: Complete this function.
   /////////////////////////////////
+  *lambda = INFINITY;
 }
 
 void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
@@ -175,6 +181,27 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   /////////////////////////////////
   // TO DO: Complete this function.
   /////////////////////////////////
+  struct ray3D t_ray = *ray;
+  rayTransform(ray, &t_ray, sphere);
+  double A = dot(&(t_ray.d), &(t_ray.d));
+  double B = 2 * dot(&(t_ray.d), &(t_ray.p0));
+  double C = dot(&(t_ray.p0), &(t_ray.p0)) - 1;
+  double discriminant = B*B - 4*A*C;
+  if (discriminant < 0) {
+    // No solutions
+    *lambda = INFINITY;
+  } else {
+    // One or two solutions. Find the smallest positive solution.
+    double lambda1 = (-B - sqrt(discriminant))/(2*A);
+    double lambda2 = (-B + sqrt(discriminant))/(2*A);
+    if (lambda2 >= 0) {
+      *lambda = lambda2;
+    } else if (lambda1 >= 0) {
+      *lambda = lambda1;
+    } else {
+      *lambda = INFINITY;
+    }
+  }
 }
 
 void loadTexture(struct object3D *o, const char *filename) {
