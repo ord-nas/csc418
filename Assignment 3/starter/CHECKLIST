@@ -1,0 +1,76 @@
+CSC418/2504 - Winter 2017
+Checklist for Assignment 3
+----------------------------------------------------------------------------------
+
+Name: 
+
+Student ID:
+
+-----------------------------------------------------------------------------------------
+
+A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded otherwise!)
+
+1. I verify that I completed this assignment according to the 
+   Academic Honesty policy stated in 
+
+   http://www.cs.brown.edu/~ls/teaching08.html
+
+   ___Yes   ___No
+
+2. I understand that it is not okay to use code found online and represent it as my own work.
+   Further, I understand that if caught with similarity software, I can be reprimanded by the
+   department and will have to deal with the consequences of this.
+	
+
+   ___Yes   ___No
+
+   If you have used an external source, see 3 and report it there.
+
+3. I collaborated on this assignment with another student or borrowed code from another
+   source (the penalties/grades will be assessed according to the policy stated in 
+   http://www.cs.brown.edu/~ls/teaching08.html)
+
+   ___Yes   ___No
+
+
+   If you checked yes, please supply the following
+
+       Student name/Source: 
+
+       Portion(s) of assignment completed by that student (see checklist below)
+
+-----------------------------------------------------------------------------------------
+
+B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FULL.
+
+      If a portion of the assignment was not completed fully, please provide 
+   additional information so that we can determine whether or not you are eligible
+   for partial credit. THE MORE INFORMATION YOU SUPPLY (EG. FILE WHICH CONTAINS
+   PARTIAL CODE, FUNCTION NAME, ETC, SUGGESTIONS ON WHERE AND WHAT TO LOOK FOR IN 
+   YOUR PARTIAL IMPLEMENTATION, DETAILED COMMENTS IN YOUR CODE, ETC) THE MORE LIKELY IT IS 
+   WE WILL BE ABLE TO MAKE AN ACCURATE ASSESSMENT
+
+				Completed   Partial   Not done   Mark
+[10 marks]  Ray Casting
+
+[15 marks]  Intersection	
+            for spheres
+
+[15 marks]  Intersection
+	    for square
+
+[15 marks]  Normal transforms
+
+[15 marks]  Local Phong
+
+[10 marks]  Shadows
+
+[15 marks]  Global reflection
+
+[5 marks]   Report
+
+[TA assigned]  Penalty marks
+
+
+Total for A3:							/100
+
