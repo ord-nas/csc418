@@ -118,6 +118,25 @@ void buildScene(void) {
   //           in the scene.
 }
 
+bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
+  // Construct a ray pointing from p to the light source.
+  struct point3D delta = light->p0;
+  subVectors(p, &delta);
+  delta.pw = 0;
+  struct ray3D* ray = newRay(p, &delta);
+  
+  // Now fire it off and see what it hits!
+  double lambda, unused_a, unused_b;
+  struct object3D *hit_object;
+  struct point3D unused_p, unused_n;
+  findFirstHit(ray, &lambda, obj, &hit_object, &unused_p, &unused_n, &unused_a, &unused_b);
+  free(ray);
+  // lambda < 0 means ray didn't interset anything (no shadow)
+  // lambda > 1 means intersection happend *after* the light source (no shadow)
+  // else, we have shadow
+  return (lambda > 0 && lambda < 1);
+}
+
 void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a, double b, struct colourRGB *col) {
   // This function implements the shading model as described in lecture. It takes
   // - A pointer to the first object intersected by the ray (to get the colour properties)
@@ -165,16 +184,10 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   // For diffuse and specular lighting, we need to iterate over all light
   // sources
   struct pointLS* light = light_list;
-  bool isplane = (obj->col.R == .55 &&
-		  obj->col.G == .8 &&
-		  obj->col.B == .75);
   while (light != NULL) {
     // First get a unit vector pointing in direction of light source
     struct point3D s = light->p0;
     subVectors(p, &s);
-    /* s.px = -s.px; */
-    /* s.py = -s.py; */
-    /* s.pz = -s.pz; */
     normalize(&s);
     // If we're lighting both front and back, and if n points in the opposite
     // direction to s, just flip n.
@@ -186,14 +199,14 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     }
     double n_dot_s = dot(&current_n, &s);
     
-    // Diffuse Lighting
-    double diffuse_coefficient = obj->alb.rd * max(0, n_dot_s);
-    tmp_col.R += diffuse_coefficient * R * light->col.R;
-    tmp_col.G += diffuse_coefficient * G * light->col.G;
-    tmp_col.B += diffuse_coefficient * B * light->col.B;
+    if (n_dot_s > 0 && !inShadow(obj, p, light)) {
+      // Diffuse Lighting
+      double diffuse_coefficient = obj->alb.rd * n_dot_s;
+      tmp_col.R += diffuse_coefficient * R * light->col.R;
+      tmp_col.G += diffuse_coefficient * G * light->col.G;
+      tmp_col.B += diffuse_coefficient * B * light->col.B;
     
-    // Specular lighting
-    if (n_dot_s > 0) {
+      // Specular lighting
       struct point3D r;
       r.px = -s.px + 2*n_dot_s*current_n.px;
       r.py = -s.py + 2*n_dot_s*current_n.py;
@@ -208,12 +221,6 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
       tmp_col.B += specular_coefficient * light->col.B;
     }
     
-    /* if (isplane) { */
-    /*   printf("p is: %f %f %f\n", p->px, p->py, p->pz); */
-    /*   printf("n is: %f %f %f\n", n->px, n->py, n->pz); */
-    /*   printf("l is: %f %f %f\n", light->p0.px, light->p0.py, light->p0.pz); */
-    /*   printf("s is: %f %f %f\n", s.px, s.py, s.pz); */
-    /* } */
     light = light->next;
   }
   
@@ -247,6 +254,11 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   *lambda = -1;
   *obj = NULL;
   while (current != NULL) {
+    if (current == Os) {
+      // Ignore the source object!
+      current = current->next;
+      continue;
+    }
     // Transform the ray to canonical coordinates.
     struct ray3D t_ray = *ray;
     rayTransform(ray, &t_ray, current);
