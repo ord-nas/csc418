@@ -149,7 +149,49 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   // details about the shading model.
   //////////////////////////////////////////////////////////////
 
-  // Be sure to update 'col' with the final colour computed here!
+  // Ambient Lighting
+  tmp_col.R += obj->alb.ra * R;
+  tmp_col.G += obj->alb.ra * G;
+  tmp_col.B += obj->alb.ra * B;
+
+  // Diffuse Lighting
+  struct pointLS* light = light_list;
+  // Iterate over all light sources
+  bool isplane = (obj->col.R == .55 &&
+		  obj->col.G == .8 &&
+		  obj->col.B == .75);
+  while (light != NULL) {
+    // First get a unit vector pointing in direction of light source
+    struct point3D s = light->p0;
+    subVectors(p, &s);
+    double len = length(&s);
+    s.px /= len;
+    s.py /= len;
+    s.pz /= len;
+    // Then compute the diffuse coefficient
+    double diffuse_coefficient = dot(n, &s) * obj->alb.rd;
+    if (obj->frontAndBack) {
+      diffuse_coefficient = max(diffuse_coefficient, -diffuse_coefficient);
+    } else {
+      diffuse_coefficient = max(0, diffuse_coefficient);
+    }
+    // Finally, compute the contribution of this light source to the object's
+    // colour.
+    tmp_col.R += diffuse_coefficient * R * light->col.R;
+    tmp_col.G += diffuse_coefficient * G * light->col.G;
+    tmp_col.B += diffuse_coefficient * B * light->col.B;
+
+    /* if (isplane) { */
+    /*   printf("p is: %f %f %f\n", p->px, p->py, p->pz); */
+    /*   printf("n is: %f %f %f\n", n->px, n->py, n->pz); */
+    /*   printf("l is: %f %f %f\n", light->p0.px, light->p0.py, light->p0.pz); */
+    /*   printf("s is: %f %f %f\n", s.px, s.py, s.pz); */
+    /* } */
+    light = light->next;
+  }
+  
+
+  *col = tmp_col;  
   return;
 
 }
@@ -175,15 +217,35 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   *lambda = -1;
   *obj = NULL;
   while (current != NULL) {
+    // Transform the ray to canonical coordinates.
+    struct ray3D t_ray = *ray;
+    rayTransform(ray, &t_ray, current);
+    // Get the intersection with the canonical object.
     double current_lambda;
-    current->intersect(current, ray, &current_lambda, p, n, a, b);
+    struct point3D current_p;
+    struct point3D current_n;
+    double current_a;
+    double current_b;
+    current->intersect(current, &t_ray, &current_lambda, &current_p,
+		       &current_n, &current_a, &current_b);
     if (current_lambda > 0) {
       if (*lambda < 0 || current_lambda < *lambda) {
+	// Yay, we're the closest object so far!
 	*lambda = current_lambda;
 	*obj = current;
+	*p = current_p;
+	*n = current_n;
+	*a = current_a;
+	*b = current_b;
       }
     }
     current = current->next;
+  }
+
+  if (*obj) {
+    // Do some work to transform the point p and normal n.
+    matVecMult((*obj)->T, p);
+    normalTransform(n, n, *obj);
   }
 }
 
@@ -222,7 +284,8 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
 
   findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b);
   if (lambda > 0) {
-    *col = obj->col;
+    rtShade(obj, &p, &n, ray, depth, a, b, col);
+    //*col = obj->col;
   } else {
     col->R = -1;
     col->G = -1;

@@ -59,28 +59,6 @@ struct pointLS *newPLS(struct point3D *p0, double r, double g, double b) {
 /////////////////////////////////////////////
 // Ray and normal transforms
 /////////////////////////////////////////////
-inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, struct object3D *obj) {
-  // Transforms a ray using the inverse transform for the specified object. This is so that we can
-  // use the intersection test for the canonical object. Note that this has to be done carefully!
-
-  ///////////////////////////////////////////
-  // TO DO: Complete this function
-  ///////////////////////////////////////////
-  ray_transformed->p0 = ray_orig->p0;
-  matVecMult(obj->Tinv, &(ray_transformed->p0));
-  ray_transformed->d = ray_orig->d;
-  matVecMult(obj->Tinv, &(ray_transformed->d));
-}
-
-inline void normalTransform(struct point3D *n_orig, struct point3D *n_transformed, struct object3D *obj) {
-  // Computes the normal at an affinely transformed point given the original normal and the
-  // object's inverse transformation. From the notes:
-  // n_transformed=A^-T*n normalized.
-
-  ///////////////////////////////////////////
-  // TO DO: Complete this function
-  ///////////////////////////////////////////
-}
 
 /////////////////////////////////////////////
 // Object management section
@@ -176,33 +154,43 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   // (1,1,0), (-1,1,0), (-1,-1,0), (1,-1,0)
   // With normal vector (0,0,1) (i.e. parallel to the XY plane)
 
-  // Transform the ray to canonical coordinates.
-  struct ray3D t_ray = *ray;
-  rayTransform(ray, &t_ray, plane);
-  
   // Build a matrix to hold the linear system we want to solve.
   float A[3][3];
   A[0][0] = 1 - (-1);
   A[0][1] = 1 - (1);
-  A[0][2] = t_ray.d.px;
+  A[0][2] = ray->d.px;
   A[1][0] = 1 - (1);
   A[1][1] = 1 - (-1);
-  A[1][2] = t_ray.d.py;
+  A[1][2] = ray->d.py;
   A[2][0] = 0 - (0);
   A[2][1] = 0 - (0);
-  A[2][2] = t_ray.d.pz;
+  A[2][2] = ray->d.pz;
   bool success = invert3x3Mat(A);
   if (!success) {
     *lambda = -1;
   } else {
-    double beta = A[0][0] * (1 - t_ray.p0.px) + A[0][1] * (1 - t_ray.p0.py) + A[0][2] * (1 - t_ray.p0.pz);
-    double gamma = A[1][0] * (1 - t_ray.p0.px) + A[1][1] * (1 - t_ray.p0.py) + A[1][2] * (1 - t_ray.p0.pz);
-    double t = A[2][0] * (1 - t_ray.p0.px) + A[2][1] * (1 - t_ray.p0.py) + A[2][2] * (1 - t_ray.p0.pz);
+    double beta = A[0][0] * (1 - ray->p0.px) + A[0][1] * (1 - ray->p0.py) + A[0][2] * (1 - ray->p0.pz);
+    double gamma = A[1][0] * (1 - ray->p0.px) + A[1][1] * (1 - ray->p0.py) + A[1][2] * (1 - ray->p0.pz);
+    double t = A[2][0] * (1 - ray->p0.px) + A[2][1] * (1 - ray->p0.py) + A[2][2] * (1 - ray->p0.pz);
     if (beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && t > 0) {
       *lambda = t;
     } else {
       *lambda = -1;
     }
+  }
+
+  // If there was an intersection, compute the point of intersection and the
+  // normal.
+  if (lambda > 0) {
+    p->px = ray->p0.px + *lambda * ray->d.px;
+    p->py = ray->p0.py + *lambda * ray->d.py;
+    p->pz = ray->p0.pz + *lambda * ray->d.pz;
+    p->pw = 1.0;
+    // For the canonical plane, the normal is always the same!
+    n->px = 0.0;
+    n->py = 0.0;
+    n->pz = 1.0;
+    n->pw = 0.0;
   }
 }
 
@@ -213,11 +201,9 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   /////////////////////////////////
   // TO DO: Complete this function.
   /////////////////////////////////
-  struct ray3D t_ray = *ray;
-  rayTransform(ray, &t_ray, sphere);
-  double A = dot(&(t_ray.d), &(t_ray.d));
-  double B = 2 * dot(&(t_ray.d), &(t_ray.p0));
-  double C = dot(&(t_ray.p0), &(t_ray.p0)) - 1;
+  double A = dot(&(ray->d), &(ray->d));
+  double B = 2 * dot(&(ray->d), &(ray->p0));
+  double C = dot(&(ray->p0), &(ray->p0)) - 1;
   double discriminant = B*B - 4*A*C;
   if (discriminant < 0) {
     // No solutions
@@ -233,6 +219,19 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
     } else {
       *lambda = -1;
     }
+  }
+
+  // If there was an intersection, compute the point of intersection and the
+  // normal.
+  if (*lambda > 0) {
+    p->px = ray->p0.px + *lambda * ray->d.px;
+    p->py = ray->p0.py + *lambda * ray->d.py;
+    p->pz = ray->p0.pz + *lambda * ray->d.pz;
+    p->pw = 1.0;
+    // For the unit sphere at the origin, the point of intersection *is also*
+    // the unit normal!
+    *n = *p;
+    n->pw = 0.0;
   }
 }
 

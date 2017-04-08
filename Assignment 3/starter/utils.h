@@ -154,8 +154,48 @@ inline struct ray3D *newRay(struct point3D *p0, struct point3D *d) {
 }
 
 // Ray and normal transformations to enable the use of canonical intersection tests with transformed objects
-void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, struct object3D *obj);
-void normalTransform(struct point3D *n_orig, struct point3D *n_transformed, struct object3D *obj);
+inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, struct object3D *obj) {
+  // Transforms a ray using the inverse transform for the specified object. This is so that we can
+  // use the intersection test for the canonical object. Note that this has to be done carefully!
+
+  ///////////////////////////////////////////
+  // TO DO: Complete this function
+  ///////////////////////////////////////////
+  ray_transformed->p0 = ray_orig->p0;
+  matVecMult(obj->Tinv, &(ray_transformed->p0));
+  ray_transformed->d = ray_orig->d;
+  matVecMult(obj->Tinv, &(ray_transformed->d));
+}
+
+inline void normalTransform(struct point3D *n_orig, struct point3D *n_transformed, struct object3D *obj) {
+  // Computes the normal at an affinely transformed point given the original normal and the
+  // object's inverse transformation. From the notes:
+  // n_transformed=A^-T*n normalized.
+
+  ///////////////////////////////////////////
+  // TO DO: Complete this function
+  ///////////////////////////////////////////
+  double normalTransform[4][4];
+  // We want the transpose of the 3x3 affine matrix, and then everything else
+  // can remain as-is.
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (i < 3 && j < 3) {
+	normalTransform[i][j] = obj->Tinv[j][i];
+      } else {
+	normalTransform[i][j] = obj->Tinv[i][j];
+      }
+    }
+  }
+  // Do the matrix multiplication
+  *n_transformed = *n_orig;
+  matVecMult(normalTransform, n_transformed);
+  // Now normalize
+  double len = length(n_transformed);
+  n_transformed->px /= len;
+  n_transformed->py /= len;
+  n_transformed->pz /= len;
+}
 
 // Functions to create new objects, one for each type of object implemented.
 // You'll need to add code for these functions in utils.c
