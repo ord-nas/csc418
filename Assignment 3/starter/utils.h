@@ -191,10 +191,7 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
   *n_transformed = *n_orig;
   matVecMult(normalTransform, n_transformed);
   // Now normalize
-  double len = length(n_transformed);
-  n_transformed->px /= len;
-  n_transformed->py /= len;
-  n_transformed->pz /= len;
+  normalize(n_transformed);
 }
 
 // Functions to create new objects, one for each type of object implemented.

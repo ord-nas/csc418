@@ -26,6 +26,14 @@ struct object3D *object_list;
 struct pointLS *light_list;
 int MAX_DEPTH;
 
+double min(double a, double b) {
+  if (a < b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
 void buildScene(void) {
   // Sets up all objects in the scene. This involves creating each object,
   // defining the transformations needed to shape and position it as
@@ -79,14 +87,14 @@ void buildScene(void) {
   insertObject(o,&object_list);                  // Insert into object list
 
   // Let's add a couple spheres
-  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,6);
+  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,30);
   Scale(o,.75,.5,1.5);
   RotateY(o,PI/2);
   Translate(o,-1.45,1.1,3.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,6);
+  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,30);
   Scale(o,.5,2.0,1.0);
   RotateZ(o,PI/1.5);
   Translate(o,1.75,1.25,5.0);
@@ -154,9 +162,9 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   tmp_col.G += obj->alb.ra * G;
   tmp_col.B += obj->alb.ra * B;
 
-  // Diffuse Lighting
+  // For diffuse and specular lighting, we need to iterate over all light
+  // sources
   struct pointLS* light = light_list;
-  // Iterate over all light sources
   bool isplane = (obj->col.R == .55 &&
 		  obj->col.G == .8 &&
 		  obj->col.B == .75);
@@ -164,23 +172,42 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     // First get a unit vector pointing in direction of light source
     struct point3D s = light->p0;
     subVectors(p, &s);
-    double len = length(&s);
-    s.px /= len;
-    s.py /= len;
-    s.pz /= len;
-    // Then compute the diffuse coefficient
-    double diffuse_coefficient = dot(n, &s) * obj->alb.rd;
-    if (obj->frontAndBack) {
-      diffuse_coefficient = max(diffuse_coefficient, -diffuse_coefficient);
-    } else {
-      diffuse_coefficient = max(0, diffuse_coefficient);
+    /* s.px = -s.px; */
+    /* s.py = -s.py; */
+    /* s.pz = -s.pz; */
+    normalize(&s);
+    // If we're lighting both front and back, and if n points in the opposite
+    // direction to s, just flip n.
+    struct point3D current_n = *n;
+    if (obj->frontAndBack && dot(&current_n, &s) < 0) {
+      current_n.px *= -1;
+      current_n.py *= -1;
+      current_n.pz *= -1;
     }
-    // Finally, compute the contribution of this light source to the object's
-    // colour.
+    double n_dot_s = dot(&current_n, &s);
+    
+    // Diffuse Lighting
+    double diffuse_coefficient = obj->alb.rd * max(0, n_dot_s);
     tmp_col.R += diffuse_coefficient * R * light->col.R;
     tmp_col.G += diffuse_coefficient * G * light->col.G;
     tmp_col.B += diffuse_coefficient * B * light->col.B;
-
+    
+    // Specular lighting
+    if (n_dot_s > 0) {
+      struct point3D r;
+      r.px = -s.px + 2*n_dot_s*current_n.px;
+      r.py = -s.py + 2*n_dot_s*current_n.py;
+      r.pz = -s.pz + 2*n_dot_s*current_n.pz;
+      r.pw = 0.0;
+      struct point3D b = ray->p0;
+      subVectors(p, &b);
+      normalize(&b);
+      double specular_coefficient = obj->alb.rs * max(0, pow(dot(&r, &b), obj->shinyness));
+      tmp_col.R += specular_coefficient * light->col.R;
+      tmp_col.G += specular_coefficient * light->col.G;
+      tmp_col.B += specular_coefficient * light->col.B;
+    }
+    
     /* if (isplane) { */
     /*   printf("p is: %f %f %f\n", p->px, p->py, p->pz); */
     /*   printf("n is: %f %f %f\n", n->px, n->py, n->pz); */
@@ -191,6 +218,9 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   }
   
 
+  /* col->R = 0;//max(0, n->px); */
+  /* col->G = 0;//max(0, n->py); */
+  /* col->B = 0;//max(0, n->pz); */
   *col = tmp_col;  
   return;
 
@@ -244,6 +274,9 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
 
   if (*obj) {
     // Do some work to transform the point p and normal n.
+    /* p->px = ray->p0.px + *lambda * ray->d.px; */
+    /* p->py = ray->p0.py + *lambda * ray->d.py; */
+    /* p->pz = ray->p0.pz + *lambda * ray->d.pz; */
     matVecMult((*obj)->T, p);
     normalTransform(n, n, *obj);
   }
@@ -493,9 +526,9 @@ int main(int argc, char *argv[]) {
 	col = background;
       }
 
-      rgbIm[3*sx*j + 3*i + 0] = col.R * 255 + 0.5;
-      rgbIm[3*sx*j + 3*i + 1] = col.G * 255 + 0.5;
-      rgbIm[3*sx*j + 3*i + 2] = col.B * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 0] = min(1.0, col.R) * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 1] = min(1.0, col.G) * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 2] = min(1.0, col.B) * 255 + 0.5;
       
       free(ray);
     } // end for i

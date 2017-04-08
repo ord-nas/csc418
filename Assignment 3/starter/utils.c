@@ -212,10 +212,10 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
     // One or two solutions. Find the smallest positive solution.
     double lambda1 = (-B - sqrt(discriminant))/(2*A);
     double lambda2 = (-B + sqrt(discriminant))/(2*A);
-    if (lambda2 > 0) {
-      *lambda = lambda2;
-    } else if (lambda1 > 0) {
+    if (lambda1 > 0) {
       *lambda = lambda1;
+    } else if (lambda2 > 0) {
+      *lambda = lambda2;
     } else {
       *lambda = -1;
     }
