@@ -170,7 +170,21 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   // TO DO: Implement this function. See the notes for
   // reference of what to do in here
   /////////////////////////////////////////////////////////////
-
+  // Now intersect it with all the objects
+  struct object3D* current = object_list;
+  *lambda = -1;
+  *obj = NULL;
+  while (current != NULL) {
+    double current_lambda;
+    current->intersect(current, ray, &current_lambda, p, n, a, b);
+    if (current_lambda > 0) {
+      if (*lambda < 0 || current_lambda < *lambda) {
+	*lambda = current_lambda;
+	*obj = current;
+      }
+    }
+    current = current->next;
+  }
 }
 
 void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os) {
@@ -205,6 +219,15 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
   // TO DO: Complete this function. Refer to the notes
   // if you are unsure what to do here.
   ///////////////////////////////////////////////////////
+
+  findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b);
+  if (lambda > 0) {
+    *col = obj->col;
+  } else {
+    col->R = -1;
+    col->G = -1;
+    col->B = -1;
+  }
 }
 
 // Inverts the given 3x3 matrix in place. Returns true on success, false
@@ -399,27 +422,17 @@ int main(int argc, char *argv[]) {
       // Ray in world coordinates
       struct ray3D* ray = newRay(&(cam->e), &d);
 
-      // Now intersect it with all the objects
-      struct object3D* current = object_list;
-      double best_lambda = INFINITY;
-      struct object3D* best_obj = NULL;
-      while (current != NULL) {
-	double lambda;
-	current->intersect(current, ray, &lambda, NULL, NULL, NULL, NULL);
-	if (!isinf(lambda) && lambda < best_lambda) {
-	  best_lambda = lambda;
-	  best_obj = current;
-	}
-	current = current->next;
+      int depth = 0;
+      struct colourRGB col;
+      rayTrace(ray, depth, &col, NULL);
+
+      if (col.R < 0 || col.G < 0 || col.B < 0) {
+	col = background;
       }
 
-      if (best_obj) {
-	rgbIm[3*sx*j + 3*i + 0] = best_obj->col.R * 255 + 0.5;
-	rgbIm[3*sx*j + 3*i + 1] = best_obj->col.G * 255 + 0.5;
-	rgbIm[3*sx*j + 3*i + 2] = best_obj->col.B * 255 + 0.5;
-	//printf("GOT INTERSECTION! %f %f %f\n", best_obj->col.R,
-	//c       best_obj->col.G, best_obj->col.B);
-      }
+      rgbIm[3*sx*j + 3*i + 0] = col.R * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 1] = col.G * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 2] = col.B * 255 + 0.5;
       
       free(ray);
     } // end for i

@@ -193,7 +193,7 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   A[2][2] = t_ray.d.pz;
   bool success = invert3x3Mat(A);
   if (!success) {
-    *lambda = INFINITY;
+    *lambda = -1;
   } else {
     double beta = A[0][0] * (1 - t_ray.p0.px) + A[0][1] * (1 - t_ray.p0.py) + A[0][2] * (1 - t_ray.p0.pz);
     double gamma = A[1][0] * (1 - t_ray.p0.px) + A[1][1] * (1 - t_ray.p0.py) + A[1][2] * (1 - t_ray.p0.pz);
@@ -201,7 +201,7 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
     if (beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && t > 0) {
       *lambda = t;
     } else {
-      *lambda = INFINITY;
+      *lambda = -1;
     }
   }
 }
@@ -221,17 +221,17 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   double discriminant = B*B - 4*A*C;
   if (discriminant < 0) {
     // No solutions
-    *lambda = INFINITY;
+    *lambda = -1;
   } else {
     // One or two solutions. Find the smallest positive solution.
     double lambda1 = (-B - sqrt(discriminant))/(2*A);
     double lambda2 = (-B + sqrt(discriminant))/(2*A);
-    if (lambda2 >= 0) {
+    if (lambda2 > 0) {
       *lambda = lambda2;
-    } else if (lambda1 >= 0) {
+    } else if (lambda1 > 0) {
       *lambda = lambda1;
     } else {
-      *lambda = INFINITY;
+      *lambda = -1;
     }
   }
 }
