@@ -119,6 +119,9 @@ void buildScene(void) {
 }
 
 bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
+  // This function returns true iff the given object obj, at point p, is in
+  // shadow with respect to the given light source.
+  
   // Construct a ray pointing from p to the light source.
   struct point3D delta = light->p0;
   subVectors(p, &delta);
@@ -127,24 +130,24 @@ bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
   
   // Now fire it off and see what it hits!
   double lambda, unused_a, unused_b;
-  struct object3D *hit_object;
+  struct object3D *unused_object;
   struct point3D unused_p, unused_n;
-  findFirstHit(ray, &lambda, obj, &hit_object, &unused_p, &unused_n, &unused_a, &unused_b);
+  findFirstHit(ray, &lambda, obj, &unused_object, &unused_p, &unused_n, &unused_a, &unused_b);
   free(ray);
   // lambda < 0 means ray didn't interset anything (no shadow)
-  // lambda > 1 means intersection happend *after* the light source (no shadow)
+  // lambda > 1 means intersection happened *after* the light source (no shadow)
   // else, we have shadow
   return (lambda > 0 && lambda < 1);
 }
 
-void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a, double b, struct colourRGB *col) {
+void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col) {
   // This function implements the shading model as described in lecture. It takes
   // - A pointer to the first object intersected by the ray (to get the colour properties)
   // - The coordinates of the intersection point (in world coordinates)
   // - The normal at the point
   // - The ray (needed to determine the reflection direction to use for the global component, as well as for
   //   the Phong specular component)
-  // - The current racursion depth
+  // - The current recursion depth
   // - The (a,b) texture coordinates (meaningless unless texture is enabled)
   //
   // Returns:
@@ -168,7 +171,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   } else {
     // Get object colour from the texture given the texture coordinates (a,b), and the texturing function
     // for the object. Note that we will use textures also for Photon Mapping.
-    obj->textureMap(obj->texImg,a,b,&R,&G,&B);
+    obj->textureMap(obj->texImg,a_tex,b_tex,&R,&G,&B);
   }
 
   //////////////////////////////////////////////////////////////
@@ -181,6 +184,11 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   tmp_col.G += obj->alb.ra * G;
   tmp_col.B += obj->alb.ra * B;
 
+  // Vector pointing from p to camera
+  struct point3D b = ray->p0;
+  subVectors(p, &b);
+  normalize(&b);
+  
   // For diffuse and specular lighting, we need to iterate over all light
   // sources
   struct pointLS* light = light_list;
@@ -199,6 +207,8 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     }
     double n_dot_s = dot(&current_n, &s);
     
+    // Only do diffuse and specular lighting if this point on the object is
+    // actually illuminated by the current light source.
     if (n_dot_s > 0 && !inShadow(obj, p, light)) {
       // Diffuse Lighting
       double diffuse_coefficient = obj->alb.rd * n_dot_s;
@@ -212,9 +222,6 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
       r.py = -s.py + 2*n_dot_s*current_n.py;
       r.pz = -s.pz + 2*n_dot_s*current_n.pz;
       r.pw = 0.0;
-      struct point3D b = ray->p0;
-      subVectors(p, &b);
-      normalize(&b);
       double specular_coefficient = obj->alb.rs * max(0, pow(dot(&r, &b), obj->shinyness));
       tmp_col.R += specular_coefficient * light->col.R;
       tmp_col.G += specular_coefficient * light->col.G;
@@ -223,6 +230,33 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     
     light = light->next;
   }
+
+  // Now launch a reflected ray
+  // If we're lighting both front and back, and if n points in the opposite
+  // direction to b, just flip n.
+  struct point3D current_n = *n;
+  if (obj->frontAndBack && dot(&current_n, &b) < 0) {
+    current_n.px *= -1;
+    current_n.py *= -1;
+    current_n.pz *= -1;
+  }
+  double n_dot_b = dot(&current_n, &b);
+  if (n_dot_b > 0) {
+    struct point3D r;
+    r.px = -b.px + 2*n_dot_b*current_n.px;
+    r.py = -b.py + 2*n_dot_b*current_n.py;
+    r.pz = -b.pz + 2*n_dot_b*current_n.pz;
+    r.pw = 0.0;
+    struct ray3D* reflected_ray = newRay(p, &r);
+    struct colourRGB reflected_col;
+    rayTrace(reflected_ray, depth+1, &reflected_col, obj);
+    if (reflected_col.R >= 0 && reflected_col.G >= 0 && reflected_col.B >= 0) {
+      tmp_col.R += obj->alb.rg * reflected_col.R;
+      tmp_col.G += obj->alb.rg * reflected_col.G;
+      tmp_col.B += obj->alb.rg * reflected_col.B;
+    }
+    free(reflected_ray);
+  }    
   
 
   /* col->R = 0;//max(0, n->px); */
