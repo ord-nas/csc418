@@ -109,6 +109,16 @@ void buildScene(void) {
   // Let's add a plane
   // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
   o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  loadTexture(o, "smarties.ppm");
+  double r, g, b;
+  texMap(o->texImg, 0, 0, &r, &g, &b);
+  printf("0 0 -> %f %f %f\n", r, g, b);
+  texMap(o->texImg, 0, 1, &r, &g, &b);
+  printf("0 1 -> %f %f %f\n", r, g, b);
+  texMap(o->texImg, 1, 0, &r, &g, &b);
+  printf("1 0 -> %f %f %f\n", r, g, b);
+  texMap(o->texImg, .999, .999, &r, &g, &b);
+  printf("1 1 -> %f %f %f\n", r, g, b);
   // should see some reflections if all is done properly.
   // Colour is close to cyan, and currently the plane is
   // completely opaque (alpha=1). The refraction index is
@@ -137,25 +147,25 @@ void buildScene(void) {
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  /* // Insert a single point light source. */
-  /* p.px=0; */
-  /* p.py=15.5; */
-  /* p.pz=-5.5; */
-  /* p.pw=1; */
-  /* l=newPLS(&p,.95,.95,.95); */
-  /* insertPLS(l,&light_list); */
+  // Insert a single point light source.
+  p.px=0;
+  p.py=15.5;
+  p.pz=-5.5;
+  p.pw=1;
+  l=newPLS(&p,.95,.95,.95);
+  insertPLS(l,&light_list);
   
-  // Insert an area light source.
-  o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);  // Note this plane is just for
-					     // defining the area light source,
-					     // so its material properties don't
-					     // matter.
-  Scale(o,2,2,1);
-  RotateZ(o,PI/1.20);
-  RotateX(o,PI/2.25);
-  Translate(o,0,15.5,-5.5);
-  insertAreaLS(o, .95, .95, .95, 20, 20, &light_list);
-  free(o);
+  /* // Insert an area light source. */
+  /* o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);  // Note this plane is just for */
+  /* 					     // defining the area light source, */
+  /* 					     // so its material properties don't */
+  /* 					     // matter. */
+  /* Scale(o,2,2,1); */
+  /* RotateZ(o,PI/1.20); */
+  /* RotateX(o,PI/2.25); */
+  /* Translate(o,0,15.5,-5.5); */
+  /* insertAreaLS(o, .95, .95, .95, 20, 20, &light_list); */
+  /* free(o); */
 
   // End of simple scene for Assignment 3
   // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
@@ -505,6 +515,7 @@ int main(int argc, char *argv[]) {
   struct colourRGB background;   // Background colour
   int i,j;                       // Counters for pixel coordinates
   unsigned char *rgbIm;
+  int rgbArray[500][500][3];
 
   // Seed random number generator
   srand48(time(NULL));
@@ -625,6 +636,7 @@ int main(int argc, char *argv[]) {
 
   fprintf(stderr,"Rendering row: ");
   // For each of the pixels in the image
+  //#pragma omp parallel for
   for (j=0;j<sx;j++) {
     fprintf(stderr,"%d/%d, ",j,sx);
     for (i=0;i<sx;i++) {
@@ -648,9 +660,12 @@ int main(int argc, char *argv[]) {
 	    struct colourRGB current_col;
 	    // Choose a point randomly from inside the grid cell, to avoid moire
 	    // patterns
-	    double new_i = i + (ii + drand48())/numSteps;
-	    double new_j = j + (jj + drand48())/numSteps;
+	    double new_i = i + (ii + 0.5)/numSteps;
+	    double new_j = j + (jj + 0.5)/numSteps;
 	    launchRay(cam, du, dv, new_i, new_j, &background, &current_col);
+	    //current_col.R = 1;
+	    //current_col.G = 0;
+	    //current_col.B = 0;
 	    col.R += current_col.R;
 	    col.G += current_col.G;
 	    col.B += current_col.B;
@@ -662,12 +677,23 @@ int main(int argc, char *argv[]) {
       }
 
       // Write the colour to the image
-      rgbIm[3*sx*j + 3*i + 0] = min(1.0, col.R) * 255 + 0.5;
-      rgbIm[3*sx*j + 3*i + 1] = min(1.0, col.G) * 255 + 0.5;
-      rgbIm[3*sx*j + 3*i + 2] = min(1.0, col.B) * 255 + 0.5;
+      rgbArray[j][i][0] = min(1.0, col.R) * 255 + 0.5;
+      rgbArray[j][i][1] = min(1.0, col.G) * 255 + 0.5;
+      rgbArray[j][i][2] = min(1.0, col.B) * 255 + 0.5;
+      /* if (rgbArray[j][i][0] != 255) printf("\n\nERROR!\n\n"); */
+      /* if (rgbArray[j][i][1] != 0) printf("\n\nERROR!\n\n"); */
+      /* if (rgbArray[j][i][2] != 0) printf("\n\nERROR!\n\n"); */
       
     } // end for i
   } // end for j
+  
+  for (int i = 0; i < sx; ++i) {
+    for (int j = 0; j < sx; ++j) {
+      rgbIm[3*sx*j + 3*i + 0] = rgbArray[j][i][0];
+      rgbIm[3*sx*j + 3*i + 1] = rgbArray[j][i][1];
+      rgbIm[3*sx*j + 3*i + 2] = rgbArray[j][i][2];
+    }
+  }
 
   fprintf(stderr,"\nDone!\n");
 

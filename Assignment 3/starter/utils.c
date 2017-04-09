@@ -180,7 +180,7 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   }
 
   // If there was an intersection, compute the point of intersection and the
-  // normal.
+  // normal and the texture coordinates.
   if (lambda > 0) {
     p->px = ray->p0.px + *lambda * ray->d.px;
     p->py = ray->p0.py + *lambda * ray->d.py;
@@ -191,6 +191,10 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
     n->py = 0.0;
     n->pz = 1.0;
     n->pw = 0.0;
+    // The texture coordinates are just scaled x and y coordinates. We also
+    // clamp it to [0, 1] in case of rounding errors.
+    *a = max(0, min(1, p->px/2 + 0.5));
+    *b = max(0, min(1, p->py/2 + 0.5));
   }
 }
 
@@ -270,10 +274,49 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
   // coordinates. Your code should use bi-linear
   // interpolation to obtain the texture colour.
   //////////////////////////////////////////////////
-
-  *(R)=0;        // Returns black - delete this and
-  *(G)=0;        // replace with your code to compute
-  *(B)=0;        // texture colour at (a,b)
+  double *rgbTexture = (double*)(img->rgbdata);
+  double x = a * (img->sx-1);
+  double y = b * (img->sy-1);
+  int x_low = floor(x);
+  int x_high = ceil(x);
+  int y_low = floor(y);
+  int y_high = ceil(y);
+  /* printf("(a, b) = %f %f, (x, y) = %f %f, (x_low, y_low) = %d %d, (x_high, y_high) = %d %d\n", */
+  /* 	 a, b, x, y, x_low, y_low, x_high, y_high); */
+  // First do interpolation in the x direction
+  struct colourRGB y_low_col;
+  struct colourRGB y_high_col;
+  if (x_low == x_high) {
+    y_low_col.R = rgbTexture[3*img->sx*y_low + 3*x_low + 0];
+    y_low_col.G = rgbTexture[3*img->sx*y_low + 3*x_low + 1];
+    y_low_col.B = rgbTexture[3*img->sx*y_low + 3*x_low + 2];
+    y_high_col.R = rgbTexture[3*img->sx*y_high + 3*x_low + 0];
+    y_high_col.G = rgbTexture[3*img->sx*y_high + 3*x_low + 1];
+    y_high_col.B = rgbTexture[3*img->sx*y_high + 3*x_low + 2];
+  } else {
+    y_low_col.R = ((x_high - x) * rgbTexture[3*img->sx*y_low + 3*x_low + 0] +
+		   (x - x_low) * rgbTexture[3*img->sx*y_low + 3*x_high + 0]);
+    y_low_col.G = ((x_high - x) * rgbTexture[3*img->sx*y_low + 3*x_low + 1] +
+		   (x - x_low) * rgbTexture[3*img->sx*y_low + 3*x_high + 1]);
+    y_low_col.B = ((x_high - x) * rgbTexture[3*img->sx*y_low + 3*x_low + 2] +
+		   (x - x_low) * rgbTexture[3*img->sx*y_low + 3*x_high + 2]);
+    y_high_col.R = ((x_high - x) * rgbTexture[3*img->sx*y_high + 3*x_low + 0] +
+		    (x - x_low) * rgbTexture[3*img->sx*y_high + 3*x_high + 0]);
+    y_high_col.G = ((x_high - x) * rgbTexture[3*img->sx*y_high + 3*x_low + 1] +
+		    (x - x_low) * rgbTexture[3*img->sx*y_high + 3*x_high + 1]);
+    y_high_col.B = ((x_high - x) * rgbTexture[3*img->sx*y_high + 3*x_low + 2] +
+		    (x - x_low) * rgbTexture[3*img->sx*y_high + 3*x_high + 2]);
+  }
+  // Now do interpolation in the y direction
+  if (y_low == y_high) {
+    *(R) = y_low_col.R;
+    *(G) = y_low_col.G;
+    *(B) = y_low_col.B;
+  } else {
+    *(R) = (y_high - y) * y_low_col.R + (y - y_low) * y_high_col.R;
+    *(G) = (y_high - y) * y_low_col.G + (y - y_low) * y_high_col.G;
+    *(B) = (y_high - y) * y_low_col.B + (y - y_low) * y_high_col.B;
+  }
   return;
 }
 
