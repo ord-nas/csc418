@@ -148,12 +148,12 @@ struct view {
 int main(int argc, char *argv[]);                                                                       // Main raytracing function.
 double min(double a, double b);
 void buildScene(void);                                                                                  // Scene set up. Defines objects and object transformations
-void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os);                // RayTracing routine
+void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os, unsigned short* random_state);
 void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b);
-void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n,struct ray3D *ray, int depth, double a, double b, struct colourRGB *col);
+void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state);
 bool invert3x3Mat(float mat[3][3]);
 bool inShadow(struct object3D *obj, struct point3d* p, struct pointLS* light);
-void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col);
+void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col, unsigned short* random_state);
 void insertAreaLS(struct object3D *plane, double r, double g, double b, double rows, double cols, struct PointLS **light_list);
 
 #endif

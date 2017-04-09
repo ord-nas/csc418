@@ -207,7 +207,7 @@ bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
   return (lambda > 0 && lambda < 1);
 }
 
-void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col) {
+void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state) {
   // This function implements the shading model as described in lecture. It takes
   // - A pointer to the first object intersected by the ray (to get the colour properties)
   // - The coordinates of the intersection point (in world coordinates)
@@ -322,8 +322,8 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     struct point3D* v = cross(&r, u);
     normalize(v);
     // Now randomly sample from a cone around the ideal reflected ray
-    double theta = PI/2 * (drand48() * obj->roughness);
-    double phi = 2 * PI * drand48();
+    double theta = PI/2 * (erand48(random_state) * obj->roughness);
+    double phi = 2 * PI * erand48(random_state);
     double x = sin(theta) * cos(phi);
     double y = sin(theta) * sin(phi);
     double z = cos(theta);
@@ -337,7 +337,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     struct ray3D* reflected_ray = newRay(p, &jittered_r);
     // Fire the reflected ray and see what happens!
     struct colourRGB reflected_col;
-    rayTrace(reflected_ray, depth+1, &reflected_col, obj);
+    rayTrace(reflected_ray, depth+1, &reflected_col, obj, random_state);
     if (reflected_col.R >= 0 && reflected_col.G >= 0 && reflected_col.B >= 0) {
       tmp_col.R += obj->alb.rg * reflected_col.R;
       tmp_col.G += obj->alb.rg * reflected_col.G;
@@ -347,8 +347,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     free(reflected_ray);
     free(u);
     free(v);
-  }    
-  
+  }
 
   /* col->R = 0;//max(0, n->px); */
   /* col->G = 0;//max(0, n->py); */
@@ -416,7 +415,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   }
 }
 
-void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os) {
+void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os, unsigned short* random_state) {
   // Ray-Tracing function. It finds the closest intersection between
   // the ray and any scene objects, calls the shading function to
   // determine the colour at this intersection, and returns the
@@ -451,7 +450,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
 
   findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b);
   if (lambda > 0) {
-    rtShade(obj, &p, &n, ray, depth, a, b, col);
+    rtShade(obj, &p, &n, ray, depth, a, b, col, random_state);
     //*col = obj->col;
   } else {
     col->R = -1;
@@ -496,7 +495,7 @@ bool invert3x3Mat(float mat[3][3]) {
   return true;
 }
 
-void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col) {
+void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col, unsigned short* random_state) {
   // This function constructs a ray from the camera through the given pixel (i,
   // j) and returns the resulting colour. Pixel coordinates are floating point
   // to allow anti-aliasing to send rays that are more fine-grained than
@@ -517,7 +516,7 @@ void launchRay(struct view* cam, double du, double dv, double i, double j, struc
 
   // Fire the ray and get the colour.
   int depth = 0;
-  rayTrace(ray, depth, col, NULL);
+  rayTrace(ray, depth, col, NULL, random_state);
 
   // If we got an invalid colour (because the ray didn't hit anything), just set
   // colour to the background colour.
@@ -546,13 +545,11 @@ int main(int argc, char *argv[]) {
   struct ray3D *ray;             // Structure to keep the ray from e to a pixel
   struct colourRGB col;          // Return colour for raytraced pixels
   struct colourRGB background;   // Background colour
-  int i,j;                       // Counters for pixel coordinates
+  int j;                       // Counters for pixel coordinates
   unsigned char *rgbIm;
   int rgbArray[500][500][3];
+  unsigned short* erand48_state;
 
-  // Seed random number generator
-  srand48(time(NULL));
-  
   if (argc<5) {
     fprintf(stderr,"RayTracer: Can not parse input parameters\n");
     fprintf(stderr,"USAGE: RayTracer size rec_depth antialias output_name\n");
@@ -584,6 +581,11 @@ int main(int argc, char *argv[]) {
   }
   else rgbIm=(unsigned char *)im->rgbdata;
 
+  // Initialize the erand48 state. We have separate state for each row of the
+  // image, so that ray tracing each row can be done in parallel (and still be
+  // thread safe).
+  erand48_state = (unsigned short*)calloc(sx*3, sizeof(unsigned short));
+  
   ///////////////////////////////////////////////////
   // TO DO: You will need to implement several of the
   //        functions below. For Assignment 3, you can use
@@ -669,10 +671,10 @@ int main(int argc, char *argv[]) {
 
   fprintf(stderr,"Rendering row: ");
   // For each of the pixels in the image
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (j=0;j<sx;j++) {
     fprintf(stderr,"%d/%d, ",j,sx);
-    for (i=0;i<sx;i++) {
+    for (int i=0;i<sx;i++) {
       ///////////////////////////////////////////////////////////////////
       // TO DO - complete the code that should be in this loop to do the
       //         raytracing!
@@ -680,53 +682,48 @@ int main(int argc, char *argv[]) {
 
       struct colourRGB col;
       if (!antialiasing) {
-	launchRay(cam, du, dv, i + 0.5, j + 0.5, &background, &col);
+      	launchRay(cam, du, dv, i + 0.5, j + 0.5, &background, &col, erand48_state+(3*j));
       } else {
-	int numSteps = 10;
-	// Divide this pixel into a grid of numSteps x numSteps, and fire a ray
-	// into each grid cell. Then take the average colour.
-	col.R = 0;
-	col.G = 0;
-	col.B = 0;
-	for (int ii = 0; ii < numSteps; ++ii) {
-	  for (int jj = 0; jj < numSteps; ++jj) {
-	    struct colourRGB current_col;
-	    // Choose a point randomly from inside the grid cell, to avoid moire
-	    // patterns
-	    double new_i = i + (ii + 0.5)/numSteps;
-	    double new_j = j + (jj + 0.5)/numSteps;
-	    launchRay(cam, du, dv, new_i, new_j, &background, &current_col);
-	    //current_col.R = 1;
-	    //current_col.G = 0;
-	    //current_col.B = 0;
-	    col.R += current_col.R;
-	    col.G += current_col.G;
-	    col.B += current_col.B;
-	  }
-	}
-	col.R /= (numSteps*numSteps);
-	col.G /= (numSteps*numSteps);
-	col.B /= (numSteps*numSteps);
+      	int numSteps = 10;
+      	// Divide this pixel into a grid of numSteps x numSteps, and fire a ray
+      	// into each grid cell. Then take the average colour.
+      	col.R = 0;
+      	col.G = 0;
+      	col.B = 0;
+      	for (int ii = 0; ii < numSteps; ++ii) {
+      	  for (int jj = 0; jj < numSteps; ++jj) {
+      	    struct colourRGB current_col;
+      	    // Choose a point randomly from inside the grid cell, to avoid moire
+      	    // patterns
+      	    double new_i = i + (ii + 0.5)/numSteps;
+      	    double new_j = j + (jj + 0.5)/numSteps;
+      	    launchRay(cam, du, dv, new_i, new_j, &background, &current_col, erand48_state+(3*j));
+      	    //current_col.R = 1;
+      	    //current_col.G = 0;
+      	    //current_col.B = 0;
+      	    col.R += current_col.R;
+      	    col.G += current_col.G;
+      	    col.B += current_col.B;
+      	  }
+      	}
+      	col.R /= (numSteps*numSteps);
+      	col.G /= (numSteps*numSteps);
+      	col.B /= (numSteps*numSteps);
       }
 
       // Write the colour to the image
-      rgbArray[j][i][0] = min(1.0, col.R) * 255 + 0.5;
-      rgbArray[j][i][1] = min(1.0, col.G) * 255 + 0.5;
-      rgbArray[j][i][2] = min(1.0, col.B) * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 0] = min(1.0, col.R) * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 1] = min(1.0, col.G) * 255 + 0.5;
+      rgbIm[3*sx*j + 3*i + 2] = min(1.0, col.B) * 255 + 0.5;
+      /* rgbArray[j][i][0] = 255; */
+      /* rgbArray[j][i][1] = 0; */
+      /* rgbArray[j][i][2] = 0; */
       /* if (rgbArray[j][i][0] != 255) printf("\n\nERROR!\n\n"); */
       /* if (rgbArray[j][i][1] != 0) printf("\n\nERROR!\n\n"); */
       /* if (rgbArray[j][i][2] != 0) printf("\n\nERROR!\n\n"); */
       
     } // end for i
   } // end for j
-  
-  for (int i = 0; i < sx; ++i) {
-    for (int j = 0; j < sx; ++j) {
-      rgbIm[3*sx*j + 3*i + 0] = rgbArray[j][i][0];
-      rgbIm[3*sx*j + 3*i + 1] = rgbArray[j][i][1];
-      rgbIm[3*sx*j + 3*i + 2] = rgbArray[j][i][2];
-    }
-  }
 
   fprintf(stderr,"\nDone!\n");
 
@@ -737,5 +734,6 @@ int main(int argc, char *argv[]) {
   cleanup(object_list,light_list);               // Object and light lists
   deleteImage(im);                               // Rendered image
   free(cam);                                     // camera view
+  free(erand48_state);
   exit(0);
 }
