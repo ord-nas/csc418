@@ -154,5 +154,6 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n,struct r
 bool invert3x3Mat(float mat[3][3]);
 bool inShadow(struct object3D *obj, struct point3d* p, struct pointLS* light);
 void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col);
+void insertAreaLS(struct object3D *plane, double r, double g, double b, double rows, double cols, struct PointLS **light_list);
 
 #endif
