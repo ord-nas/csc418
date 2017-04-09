@@ -150,6 +150,8 @@ double min(double a, double b);
 void buildScene(void);                                                                                  // Scene set up. Defines objects and object transformations
 void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os, unsigned short* random_state);
 void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b);
+void globalShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double R, double G, double B, struct colourRGB *tmp_col, unsigned short* random_state);
+void phongShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, double R, double G, double B, struct colourRGB *tmp_col);
 void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state);
 bool invert3x3Mat(float mat[3][3]);
 bool inShadow(struct object3D *obj, struct point3d* p, struct pointLS* light);

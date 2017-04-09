@@ -207,49 +207,11 @@ bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
   return (lambda > 0 && lambda < 1);
 }
 
-void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state) {
-  // This function implements the shading model as described in lecture. It takes
-  // - A pointer to the first object intersected by the ray (to get the colour properties)
-  // - The coordinates of the intersection point (in world coordinates)
-  // - The normal at the point
-  // - The ray (needed to determine the reflection direction to use for the global component, as well as for
-  //   the Phong specular component)
-  // - The current recursion depth
-  // - The (a,b) texture coordinates (meaningless unless texture is enabled)
-  //
-  // Returns:
-  // - The colour for this ray (using the col pointer)
-  //
-
-  struct colourRGB tmp_col;      // Accumulator for colour components
-  double R,G,B;                  // Colour for the object in R G and B
-
-  // This will hold the colour as we process all the components of
-  // the Phong illumination model
-  tmp_col.R=0;
-  tmp_col.G=0;
-  tmp_col.B=0;
-  
-  // Not textured, use object colour
-  if (obj->texImg==NULL) {
-    R=obj->col.R;
-    G=obj->col.G;
-    B=obj->col.B;
-  } else {
-    // Get object colour from the texture given the texture coordinates (a,b), and the texturing function
-    // for the object. Note that we will use textures also for Photon Mapping.
-    obj->textureMap(obj->texImg,a_tex,b_tex,&R,&G,&B);
-  }
-
-  //////////////////////////////////////////////////////////////
-  // TO DO: Implement this function. Refer to the notes for
-  // details about the shading model.
-  //////////////////////////////////////////////////////////////
-
+void phongShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, double R, double G, double B, struct colourRGB *tmp_col) {
   // Ambient Lighting
-  tmp_col.R += obj->alb.ra * R;
-  tmp_col.G += obj->alb.ra * G;
-  tmp_col.B += obj->alb.ra * B;
+  tmp_col->R += obj->alb.ra * R;
+  tmp_col->G += obj->alb.ra * G;
+  tmp_col->B += obj->alb.ra * B;
 
   // Vector pointing from p to camera
   struct point3D b = ray->p0;
@@ -279,9 +241,9 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     if (n_dot_s > 0 && !inShadow(obj, p, light)) {
       // Diffuse Lighting
       double diffuse_coefficient = obj->alb.rd * n_dot_s;
-      tmp_col.R += diffuse_coefficient * R * light->col.R;
-      tmp_col.G += diffuse_coefficient * G * light->col.G;
-      tmp_col.B += diffuse_coefficient * B * light->col.B;
+      tmp_col->R += diffuse_coefficient * R * light->col.R;
+      tmp_col->G += diffuse_coefficient * G * light->col.G;
+      tmp_col->B += diffuse_coefficient * B * light->col.B;
     
       // Specular lighting
       struct point3D r;
@@ -290,15 +252,23 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
       r.pz = -s.pz + 2*n_dot_s*current_n.pz;
       r.pw = 0.0;
       double specular_coefficient = obj->alb.rs * max(0, pow(dot(&r, &b), obj->shinyness));
-      tmp_col.R += specular_coefficient * light->col.R;
-      tmp_col.G += specular_coefficient * light->col.G;
-      tmp_col.B += specular_coefficient * light->col.B;
+      tmp_col->R += specular_coefficient * light->col.R;
+      tmp_col->G += specular_coefficient * light->col.G;
+      tmp_col->B += specular_coefficient * light->col.B;
     }
     
     light = light->next;
   }
+}
 
+void globalShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double R, double G, double B, struct colourRGB *tmp_col, unsigned short* random_state) {
   // Now launch a reflected ray
+
+  // Vector pointing from p to camera
+  struct point3D b = ray->p0;
+  subVectors(p, &b);
+  normalize(&b);
+
   // If we're lighting both front and back, and if n points in the opposite
   // direction to b, just flip n.
   struct point3D current_n = *n;
@@ -339,19 +309,62 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     struct colourRGB reflected_col;
     rayTrace(reflected_ray, depth+1, &reflected_col, obj, random_state);
     if (reflected_col.R >= 0 && reflected_col.G >= 0 && reflected_col.B >= 0) {
-      tmp_col.R += obj->alb.rg * reflected_col.R;
-      tmp_col.G += obj->alb.rg * reflected_col.G;
-      tmp_col.B += obj->alb.rg * reflected_col.B;
+      tmp_col->R += obj->alb.rg * reflected_col.R;
+      tmp_col->G += obj->alb.rg * reflected_col.G;
+      tmp_col->B += obj->alb.rg * reflected_col.B;
     }
     // Clean up
     free(reflected_ray);
     free(u);
     free(v);
   }
+}
 
-  /* col->R = 0;//max(0, n->px); */
-  /* col->G = 0;//max(0, n->py); */
-  /* col->B = 0;//max(0, n->pz); */
+void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state) {
+  // This function implements the shading model as described in lecture. It takes
+  // - A pointer to the first object intersected by the ray (to get the colour properties)
+  // - The coordinates of the intersection point (in world coordinates)
+  // - The normal at the point
+  // - The ray (needed to determine the reflection direction to use for the global component, as well as for
+  //   the Phong specular component)
+  // - The current recursion depth
+  // - The (a,b) texture coordinates (meaningless unless texture is enabled)
+  //
+  // Returns:
+  // - The colour for this ray (using the col pointer)
+  //
+
+  struct colourRGB tmp_col;      // Accumulator for colour components
+  double R,G,B;                  // Colour for the object in R G and B
+
+  // This will hold the colour as we process all the components of
+  // the Phong illumination model
+  tmp_col.R=0;
+  tmp_col.G=0;
+  tmp_col.B=0;
+  
+  // Not textured, use object colour
+  if (obj->texImg==NULL) {
+    R=obj->col.R;
+    G=obj->col.G;
+    B=obj->col.B;
+  } else {
+    // Get object colour from the texture given the texture coordinates (a,b), and the texturing function
+    // for the object. Note that we will use textures also for Photon Mapping.
+    obj->textureMap(obj->texImg,a_tex,b_tex,&R,&G,&B);
+  }
+
+  //////////////////////////////////////////////////////////////
+  // TO DO: Implement this function. Refer to the notes for
+  // details about the shading model.
+  //////////////////////////////////////////////////////////////
+
+  // Do phong illumination
+  phongShade(obj, p, n, ray, R, G, B, &tmp_col);
+
+  // Do global illumination (currently just reflection)
+  globalShade(obj, p, n, ray, depth, R, G, B, &tmp_col, random_state);
+
   *col = tmp_col;  
   return;
 
