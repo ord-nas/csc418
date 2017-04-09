@@ -226,7 +226,7 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   }
 
   // If there was an intersection, compute the point of intersection and the
-  // normal.
+  // normal and the texture coordinates.
   if (*lambda > 0) {
     p->px = ray->p0.px + *lambda * ray->d.px;
     p->py = ray->p0.py + *lambda * ray->d.py;
@@ -236,6 +236,14 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
     // the unit normal!
     *n = *p;
     n->pw = 0.0;
+    // Texture coordinates are calculated by converting intersection point to
+    // sphereical cooridnates. We also clamp it to [0, 1] in case of rounding
+    // errors.
+    *a = max(0, min(1, p->px/2 + 0.5));
+    *b = max(0, min(1, p->py/2 + 0.5));
+
+    *a = max(0, min(1, atan2(p->py, p->px) / (2*PI) + 0.5));
+    *b = max(0, min(1, atan2(sqrt(p->px*p->px + p->py*p->py), p->pz) / PI));
   }
 }
 
