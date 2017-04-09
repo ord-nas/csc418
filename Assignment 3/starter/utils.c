@@ -63,7 +63,7 @@ struct pointLS *newPLS(struct point3D *p0, double r, double g, double b) {
 /////////////////////////////////////////////
 // Object management section
 /////////////////////////////////////////////
-struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny) {
+struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny, double rough) {
   // Intialize a new plane with the specified parameters:
   // ra, rd, rs, rg - Albedos for the components of the Phong model
   // r, g, b, - Colour for this plane
@@ -89,18 +89,18 @@ struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, 
     plane->alpha=alpha;
     plane->r_index=r_index;
     plane->shinyness=shiny;
+    plane->roughness=rough;
     plane->intersect=&planeIntersect;
     plane->texImg=NULL;
     memcpy(&plane->T[0][0],&eye4x4[0][0],16*sizeof(double));
     memcpy(&plane->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     plane->textureMap=&texMap;
     plane->frontAndBack=1;
-    plane->isLightSource=0;
   }
   return(plane);
 }
 
-struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny) {
+struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny, double rough) {
   // Intialize a new sphere with the specified parameters:
   // ra, rd, rs, rg - Albedos for the components of the Phong model
   // r, g, b, - Colour for this plane
@@ -125,18 +125,18 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
     sphere->alpha=alpha;
     sphere->r_index=r_index;
     sphere->shinyness=shiny;
+    sphere->roughness=rough;
     sphere->intersect=&sphereIntersect;
     sphere->texImg=NULL;
     memcpy(&sphere->T[0][0],&eye4x4[0][0],16*sizeof(double));
     memcpy(&sphere->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     sphere->textureMap=&texMap;
     sphere->frontAndBack=0;
-    sphere->isLightSource=0;
   }
   return(sphere);
 }
 
-struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny) {
+struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny, double rough) {
   // Intialize a new cylinder with the specified parameters:
   // ra, rd, rs, rg - Albedos for the components of the Phong model
   // r, g, b, - Colour for this plane
@@ -158,13 +158,13 @@ struct object3D *newCylinder(double ra, double rd, double rs, double rg, double 
     cylinder->alpha=alpha;
     cylinder->r_index=r_index;
     cylinder->shinyness=shiny;
+    cylinder->roughness=rough;
     cylinder->intersect=&cylinderIntersect;
     cylinder->texImg=NULL;
     memcpy(&cylinder->T[0][0],&eye4x4[0][0],16*sizeof(double));
     memcpy(&cylinder->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     cylinder->textureMap=&texMap;
     cylinder->frontAndBack=0;
-    cylinder->isLightSource=0;
   }
   return(cylinder);
 }

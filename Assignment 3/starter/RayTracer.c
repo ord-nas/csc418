@@ -108,7 +108,7 @@ void buildScene(void) {
 
   // Let's add a plane
   // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
-  o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
   loadTexture(o, "smarties.ppm");
   double r, g, b;
   texMap(o->texImg, 0, 0, &r, &g, &b);
@@ -133,7 +133,7 @@ void buildScene(void) {
   insertObject(o,&object_list);                  // Insert into object list
 
   // Let's add a couple spheres
-  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,30);
+  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,30,0.2);
   //loadTexture(o, "smarties.ppm");
   Scale(o,.75,.5,1.5);
   RotateY(o,PI/2);
@@ -141,7 +141,7 @@ void buildScene(void) {
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,30);
+  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,30,0.2);
   //loadTexture(o, "smarties.ppm");
   Scale(o,.5,2.0,1.0);
   RotateZ(o,PI/1.5);
@@ -149,7 +149,7 @@ void buildScene(void) {
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newCylinder(.05,.95,.95,.4,.95,.95,0,1,1,30);
+  o=newCylinder(.05,.95,.95,.4,.95,.95,0,1,1,30,0);
   RotateZ(o,PI/1.5);
   RotateX(o,-PI/1.2);
   Translate(o,1.75,-1.5,10.0);
@@ -309,12 +309,33 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   }
   double n_dot_b = dot(&current_n, &b);
   if (n_dot_b > 0) {
+    // Construct the ideal reflected ray.
     struct point3D r;
     r.px = -b.px + 2*n_dot_b*current_n.px;
     r.py = -b.py + 2*n_dot_b*current_n.py;
     r.pz = -b.pz + 2*n_dot_b*current_n.pz;
     r.pw = 0.0;
-    struct ray3D* reflected_ray = newRay(p, &r);
+    // Now create a randomly jittered reflection ray.  First create an
+    // orthonormal basis that has the ideal reflected ray as one basis vector.
+    struct point3D* u = cross(&r, &current_n);
+    normalize(u);
+    struct point3D* v = cross(&r, u);
+    normalize(v);
+    // Now randomly sample from a cone around the ideal reflected ray
+    double theta = PI/2 * (drand48() * obj->roughness);
+    double phi = 2 * PI * drand48();
+    double x = sin(theta) * cos(phi);
+    double y = sin(theta) * sin(phi);
+    double z = cos(theta);
+    // Construct the jittered ray by converting the orthonormal basis to world
+    // coordinates.
+    struct point3D jittered_r;
+    jittered_r.px = x * u->px + y * v->px + z * r.px;
+    jittered_r.py = x * u->py + y * v->py + z * r.py;
+    jittered_r.pz = x * u->pz + y * v->pz + z * r.pz;
+    jittered_r.pw = 0.0;
+    struct ray3D* reflected_ray = newRay(p, &jittered_r);
+    // Fire the reflected ray and see what happens!
     struct colourRGB reflected_col;
     rayTrace(reflected_ray, depth+1, &reflected_col, obj);
     if (reflected_col.R >= 0 && reflected_col.G >= 0 && reflected_col.B >= 0) {
@@ -322,7 +343,10 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
       tmp_col.G += obj->alb.rg * reflected_col.G;
       tmp_col.B += obj->alb.rg * reflected_col.B;
     }
+    // Clean up
     free(reflected_ray);
+    free(u);
+    free(v);
   }    
   
 
@@ -658,7 +682,7 @@ int main(int argc, char *argv[]) {
       if (!antialiasing) {
 	launchRay(cam, du, dv, i + 0.5, j + 0.5, &background, &col);
       } else {
-	int numSteps = 4;
+	int numSteps = 10;
 	// Divide this pixel into a grid of numSteps x numSteps, and fire a ray
 	// into each grid cell. Then take the average colour.
 	col.R = 0;

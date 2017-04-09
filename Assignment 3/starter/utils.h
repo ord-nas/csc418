@@ -196,9 +196,9 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
 
 // Functions to create new objects, one for each type of object implemented.
 // You'll need to add code for these functions in utils.c
-struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double R_index, double shiny);
-struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double R_index, double shiny);
-struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny);
+struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double R_index, double shiny, double rough);
+struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double R_index, double shiny, double rough);
+struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny, double rough);
 
 // Functions to compute intersections for objects.
 // You'll need to add code for these in utils.c
