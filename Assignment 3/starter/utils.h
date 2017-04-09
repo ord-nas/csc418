@@ -198,11 +198,13 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
 // You'll need to add code for these functions in utils.c
 struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double R_index, double shiny);
 struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double R_index, double shiny);
+struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny);
 
 // Functions to compute intersections for objects.
 // You'll need to add code for these in utils.c
 void planeIntersect(struct object3D *plane, struct ray3D *r, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b);
 void sphereIntersect(struct object3D *sphere, struct ray3D *r, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b);
+void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b);
 
 // Functions to texture-map objects
 // You will need to add code for these if you implement texture mapping.

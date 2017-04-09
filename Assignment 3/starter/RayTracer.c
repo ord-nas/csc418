@@ -133,19 +133,26 @@ void buildScene(void) {
   insertObject(o,&object_list);                  // Insert into object list
 
   // Let's add a couple spheres
-  o=newSphere(.05,.95,.35,0/*.35*/,1,.25,.25,1,1,30);
-  loadTexture(o, "smarties.ppm");
+  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,30);
+  //loadTexture(o, "smarties.ppm");
   Scale(o,.75,.5,1.5);
   RotateY(o,PI/2);
   Translate(o,-1.45,1.1,3.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newSphere(.05,.95,.95,0/*.75*/,.75,.95,.55,1,1,30);
-  loadTexture(o, "smarties.ppm");
+  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,30);
+  //loadTexture(o, "smarties.ppm");
   Scale(o,.5,2.0,1.0);
   RotateZ(o,PI/1.5);
   Translate(o,1.75,1.25,5.0);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  o=newCylinder(.05,.95,.95,.4,.95,.95,0,1,1,30);
+  RotateZ(o,PI/1.5);
+  RotateX(o,-PI/1.2);
+  Translate(o,1.75,-1.5,10.0);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 

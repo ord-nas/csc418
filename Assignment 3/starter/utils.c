@@ -136,6 +136,39 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
   return(sphere);
 }
 
+struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny) {
+  // Intialize a new cylinder with the specified parameters:
+  // ra, rd, rs, rg - Albedos for the components of the Phong model
+  // r, g, b, - Colour for this plane
+  // alpha - Transparency, must be set to 1 unless you are doing refraction
+  // r_index - Refraction index if you are doing refraction.
+  // shiny -Exponent for the specular component of the Phong model
+
+  struct object3D *cylinder=(struct object3D *)calloc(1,sizeof(struct object3D));
+
+  if (!cylinder) fprintf(stderr,"Unable to allocate new cylinder, out of memory!\n");
+  else {
+    cylinder->alb.ra=ra;
+    cylinder->alb.rd=rd;
+    cylinder->alb.rs=rs;
+    cylinder->alb.rg=rg;
+    cylinder->col.R=r;
+    cylinder->col.G=g;
+    cylinder->col.B=b;
+    cylinder->alpha=alpha;
+    cylinder->r_index=r_index;
+    cylinder->shinyness=shiny;
+    cylinder->intersect=&cylinderIntersect;
+    cylinder->texImg=NULL;
+    memcpy(&cylinder->T[0][0],&eye4x4[0][0],16*sizeof(double));
+    memcpy(&cylinder->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
+    cylinder->textureMap=&texMap;
+    cylinder->frontAndBack=0;
+    cylinder->isLightSource=0;
+  }
+  return(cylinder);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // TO DO:
 //      Complete the functions that compute intersections for the canonical plane
@@ -149,6 +182,8 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   /////////////////////////////////
   // TO DO: Complete this function.
   /////////////////////////////////
+  
+  // TODO THIS INTERSECT FUNCTION CAN BE MUCH SIMPLER!
   
   // The plane is defined by the following vertices (CCW)
   // (1,1,0), (-1,1,0), (-1,-1,0), (1,-1,0)
@@ -196,6 +231,108 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
     *a = max(0, min(1, p->px/2 + 0.5));
     *b = max(0, min(1, p->py/2 + 0.5));
   }
+}
+
+void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
+  // Computes and returns the value of 'lambda' at the intersection between the
+  // specified ray and the specified canonical cylinder. The cylinder is define
+  // by two unit circles in the XY plane, at z=0 and z=1.
+  *lambda = -1;
+
+  if (ray->d.pz != 0) {
+    // First check for intersection with the z=0 plane
+    double lambda1  = (0 - ray->p0.pz) / ray->d.pz;
+    if (lambda1 > 0) {
+      double x = ray->p0.px + lambda1 * ray->d.px;
+      double y = ray->p0.py + lambda1 * ray->d.py;
+      // If we intersection the z=0 plane inside the unit circle, then we
+      // intersect the bottom of the cylinder.
+      if (x*x + y*y <= 1) {
+	//printf("intersect bottom!\n");
+	*lambda = lambda1;
+	p->px = x;
+	p->py = y;
+	p->pz = 0;
+	p->pw = 1;
+	// Normal for the bottom of the cylinder is just the -z vector
+	n->px = 0;
+	n->py = 0;
+	n->pz = -1;
+	n->pw = 0;
+      }
+    }
+
+    // Now check for intersection with the z=1 plane
+    double lambda2  = (1 - ray->p0.pz) / ray->d.pz;
+    if (lambda2 > 0) {
+      double x = ray->p0.px + lambda2 * ray->d.px;
+      double y = ray->p0.py + lambda2 * ray->d.py;
+      // If we intersection the z=0 plane inside the unit circle, then we
+      // intersect the bottom of the cylinder.
+      if (x*x + y*y <= 1) {
+	// Check if our lambda is better than the previous lambda (if any)
+	if (*lambda < 0 || lambda2 < *lambda) {
+	  //printf("intersect top!\n");
+	  *lambda = lambda2;
+	  p->px = x;
+	  p->py = y;
+	  p->pz = 0;
+	  p->pw = 1;
+	  // Normal for the top of the cylinder is just the +z vector
+	  n->px = 0;
+	  n->py = 0;
+	  n->pz = 1;
+	  n->pw = 0;
+	}
+      }
+    }
+  }
+
+  // Finally, check for intersection with the body of the cylinder. We do this
+  // by solving a quadratic to find where/whether the ray would intersect an
+  // infinite cylinder (extending off to infinity in the +z and -z directions)
+  // and then we check to see if the intersection point is between z=0 and z=1.
+  double lambda_quad = -1;
+  struct ray3D ray_xy;
+  ray_xy = *ray;
+  ray_xy.p0.pz = 0;
+  ray_xy.d.pz = 0;
+  double A = dot(&(ray_xy.d), &(ray_xy.d));
+  double B = 2 * dot(&(ray_xy.d), &(ray_xy.p0));
+  double C = dot(&(ray_xy.p0), &(ray_xy.p0)) - 1;
+  double discriminant = B*B - 4*A*C;
+  if (discriminant >= 0) {
+    // One or two solutions. Find the smallest positive solution that actually
+    // interesects the *finite* cylinder.
+    double lambda3 = (-B - sqrt(discriminant))/(2*A);
+    double lambda4 = (-B + sqrt(discriminant))/(2*A);
+    double lambda3_z = ray->p0.pz + lambda3 * ray->d.pz;
+    double lambda4_z = ray->p0.pz + lambda4 * ray->d.pz;
+    if (lambda3 > 0 && lambda3_z >= 0 && lambda3_z <= 1) {
+      lambda_quad = lambda3;
+    } else if (lambda4 > 0 && lambda4_z >= 0 && lambda4_z <= 1) {
+      lambda_quad = lambda4;
+    }
+  }
+
+  // Now check if lambda_quad was better than any previous lambda (if any)
+  if (lambda_quad > 0 && (*lambda < 0 || lambda_quad < *lambda)) {
+    //printf("intersect side!\n");
+    *lambda = lambda_quad;
+    p->px = ray->p0.px + *lambda * ray->d.px;
+    p->py = ray->p0.py + *lambda * ray->d.py;
+    p->pz = ray->p0.pz + *lambda * ray->d.pz;
+    p->pw = 1.0;
+    // For the curved surface of the canonical cone, the normal is simply the
+    // point of intersection with the z component dropped.
+    *n = *p;
+    n->pz = 0.0;
+    n->pw = 0.0;
+  }
+
+  // Texture mapping not supported for cones
+  *a = 0;
+  *b = 0;
 }
 
 void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
