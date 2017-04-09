@@ -19,6 +19,7 @@
 */
 
 #include "utils.h"
+#include "time.h"
 
 // A couple of global structures and data: An object list, a light list, and the
 // maximum recursion depth
@@ -408,6 +409,38 @@ bool invert3x3Mat(float mat[3][3]) {
   return true;
 }
 
+void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col) {
+  // This function constructs a ray from the camera through the given pixel (i,
+  // j) and returns the resulting colour. Pixel coordinates are floating point
+  // to allow anti-aliasing to send rays that are more fine-grained than
+  // pixel-level.
+  double u = cam->wl + du * i;
+  double v = cam->wt + dv * j;
+  struct point3D d;
+  d.px = u;
+  d.py = v;
+  d.pz = cam->f;
+  d.pw = 0;
+
+  // Transform d into world coordinates
+  matVecMult(cam->C2W, &d);
+
+  // Ray in world coordinates
+  struct ray3D* ray = newRay(&(cam->e), &d);
+
+  // Fire the ray and get the colour.
+  int depth = 0;
+  rayTrace(ray, depth, col, NULL);
+
+  // If we got an invalid colour (because the ray didn't hit anything), just set
+  // colour to the background colour.
+  if (col->R < 0 || col->G < 0 || col->B < 0) {
+    *col = *background;
+  }
+  
+  free(ray);
+}
+
 int main(int argc, char *argv[]) {
   // Main function for the raytracer. Parses input parameters,
   // sets up the initial blank image, and calls the functions
@@ -429,6 +462,9 @@ int main(int argc, char *argv[]) {
   int i,j;                       // Counters for pixel coordinates
   unsigned char *rgbIm;
 
+  // Seed random number generator
+  srand48(time(NULL));
+  
   if (argc<5) {
     fprintf(stderr,"RayTracer: Can not parse input parameters\n");
     fprintf(stderr,"USAGE: RayTracer size rec_depth antialias output_name\n");
@@ -552,31 +588,41 @@ int main(int argc, char *argv[]) {
       // TO DO - complete the code that should be in this loop to do the
       //         raytracing!
       ///////////////////////////////////////////////////////////////////
-      double u = cam->wl + du * (i + 0.5);
-      double v = cam->wt + dv * (j + 0.5);
-      struct point3D d;
-      d.px = u;
-      d.py = v;
-      d.pz = cam->f;
-      d.pw = 0;
-      // Transform d into world coordinates
-      matVecMult(cam->C2W, &d);
-      // Ray in world coordinates
-      struct ray3D* ray = newRay(&(cam->e), &d);
 
-      int depth = 0;
       struct colourRGB col;
-      rayTrace(ray, depth, &col, NULL);
-
-      if (col.R < 0 || col.G < 0 || col.B < 0) {
-	col = background;
+      if (!antialiasing) {
+	launchRay(cam, du, dv, i + 0.5, j + 0.5, &background, &col);
+      } else {
+	int numSteps = 4;
+	// Divide this pixel into a grid of numSteps x numSteps, and fire a ray
+	// into each grid cell. Then take the average colour.
+	col.R = 0;
+	col.G = 0;
+	col.B = 0;
+	for (int ii = 0; ii < numSteps; ++ii) {
+	  for (int jj = 0; jj < numSteps; ++jj) {
+	    struct colourRGB current_col;
+	    // Choose a point randomly from inside the grid cell, to avoid moire
+	    // patterns
+	    double new_i = i + (ii + drand48())/numSteps;
+	    double new_j = j + (jj + drand48())/numSteps;
+	    /* printf("%d %d + %d %d -> %f %f\n", */
+	    /* 	   i, j, ii, jj, new_i, new_j); */
+	    launchRay(cam, du, dv, new_i, new_j, &background, &current_col);
+	    col.R += current_col.R;
+	    col.G += current_col.G;
+	    col.B += current_col.B;
+	  }
+	}
+	col.R /= (numSteps*numSteps);
+	col.G /= (numSteps*numSteps);
+	col.B /= (numSteps*numSteps);
       }
 
       rgbIm[3*sx*j + 3*i + 0] = min(1.0, col.R) * 255 + 0.5;
       rgbIm[3*sx*j + 3*i + 1] = min(1.0, col.G) * 255 + 0.5;
       rgbIm[3*sx*j + 3*i + 2] = min(1.0, col.B) * 255 + 0.5;
       
-      free(ray);
     } // end for i
   } // end for j
 

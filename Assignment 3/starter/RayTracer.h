@@ -153,5 +153,6 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
 void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n,struct ray3D *ray, int depth, double a, double b, struct colourRGB *col);
 bool invert3x3Mat(float mat[3][3]);
 bool inShadow(struct object3D *obj, struct point3d* p, struct pointLS* light);
+void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col);
 
 #endif
