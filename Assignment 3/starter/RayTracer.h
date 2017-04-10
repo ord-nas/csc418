@@ -144,6 +144,13 @@ struct view {
   double C2W[4][4];       // Camera2World conversion matrix
 };
 
+/*
+  This structure is for an environment map
+*/
+struct environment_map {
+  struct image* cube[6];
+};
+
 // Function definitions start here
 int main(int argc, char *argv[]);                                                                       // Main raytracing function.
 double min(double a, double b);
@@ -155,7 +162,9 @@ void phongShade(struct object3D *obj, struct point3D *p, struct point3D *n, stru
 void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state);
 bool invert3x3Mat(float mat[3][3]);
 bool inShadow(struct object3D *obj, struct point3d* p, struct pointLS* light);
-void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col, unsigned short* random_state);
+void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* col, unsigned short* random_state);
 void insertAreaLS(struct object3D *plane, double r, double g, double b, double rows, double cols, struct PointLS **light_list);
+void loadEnvironmentMap(struct environment_map *map, const char *filename);
+void getEnvironmentColour(struct environment_map *map, struct ray3D *ray, struct colourRGB *col);
 
 #endif

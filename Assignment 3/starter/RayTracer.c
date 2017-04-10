@@ -26,6 +26,9 @@
 struct object3D *object_list;
 struct pointLS *light_list;
 int MAX_DEPTH;
+struct colourRGB background;   // Background colour
+struct environment_map* env;
+
 
 double min(double a, double b) {
   if (a < b) {
@@ -108,17 +111,18 @@ void buildScene(void) {
 
   // Let's add a plane
   // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
-  o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
-  loadTexture(o, "smarties.ppm");
-  double r, g, b;
-  texMap(o->texImg, 0, 0, &r, &g, &b);
-  printf("0 0 -> %f %f %f\n", r, g, b);
-  texMap(o->texImg, 0, 1, &r, &g, &b);
-  printf("0 1 -> %f %f %f\n", r, g, b);
-  texMap(o->texImg, 1, 0, &r, &g, &b);
-  printf("1 0 -> %f %f %f\n", r, g, b);
-  texMap(o->texImg, .999, .999, &r, &g, &b);
-  printf("1 1 -> %f %f %f\n", r, g, b);
+  o=newPlane(.05,.05,.05,.75,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  //o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  //loadTexture(o, "smarties.ppm");
+  /* double r, g, b; */
+  /* texMap(o->texImg, 0, 0, &r, &g, &b); */
+  /* printf("0 0 -> %f %f %f\n", r, g, b); */
+  /* texMap(o->texImg, 0, 1, &r, &g, &b); */
+  /* printf("0 1 -> %f %f %f\n", r, g, b); */
+  /* texMap(o->texImg, 1, 0, &r, &g, &b); */
+  /* printf("1 0 -> %f %f %f\n", r, g, b); */
+  /* texMap(o->texImg, .999, .999, &r, &g, &b); */
+  /* printf("1 1 -> %f %f %f\n", r, g, b); */
   // should see some reflections if all is done properly.
   // Colour is close to cyan, and currently the plane is
   // completely opaque (alpha=1). The refraction index is
@@ -466,9 +470,13 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
     rtShade(obj, &p, &n, ray, depth, a, b, col, random_state);
     //*col = obj->col;
   } else {
-    col->R = -1;
-    col->G = -1;
-    col->B = -1;
+    // If the ray didn't hit anything, just set colour to the background
+    // environment map (or colour).
+    if (env) {
+      getEnvironmentColour(env, ray, col);
+    } else {
+      *col = background;
+    }
   }
 }
 
@@ -508,7 +516,7 @@ bool invert3x3Mat(float mat[3][3]) {
   return true;
 }
 
-void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* background, struct colourRGB* col, unsigned short* random_state) {
+void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* col, unsigned short* random_state) {
   // This function constructs a ray from the camera through the given pixel (i,
   // j) and returns the resulting colour. Pixel coordinates are floating point
   // to allow anti-aliasing to send rays that are more fine-grained than
@@ -530,14 +538,70 @@ void launchRay(struct view* cam, double du, double dv, double i, double j, struc
   // Fire the ray and get the colour.
   int depth = 0;
   rayTrace(ray, depth, col, NULL, random_state);
-
-  // If we got an invalid colour (because the ray didn't hit anything), just set
-  // colour to the background colour.
-  if (col->R < 0 || col->G < 0 || col->B < 0) {
-    *col = *background;
-  }
-  
   free(ray);
+}
+
+void loadEnvironmentMap(struct environment_map *map, const char *filename) {
+  // Load all sides of the cube from separate files
+  char buffer[1024];
+  for (int i = 0; i < 6; i++) {
+    sprintf(buffer, "%s_%d.ppm", filename, i);
+    map->cube[i]=readPPMimage(buffer);
+  }
+}
+
+void getEnvironmentColour(struct environment_map *map, struct ray3D *ray, struct colourRGB *col) {
+  double x = ray->d.px;
+  double y = ray->d.py;
+  double z = ray->d.pz;
+  double maximum = max(fabs(x), max(fabs(y), fabs(z)));
+
+  double maxAxis, u, v;
+  int cube_index;
+
+  if (fabs(x) == maximum) {
+    maxAxis = fabs(x);
+    if (x > 0) {
+      u = -z;
+      v = y;
+      cube_index = 0;
+    } else {
+      u = z;
+      v = y;
+      cube_index = 1;
+    }
+  } else if (fabs(y) == maximum) {
+    maxAxis = fabs(y);
+    if (y > 0) {
+      u = x;
+      v = -z;
+      cube_index = 2;
+    } else {
+      u = x;
+      v = z;
+      cube_index = 3;
+    }
+  } else if (fabs(z) == maximum) {
+    maxAxis = fabs(z);
+    if (z > 0) {
+      u = x;
+      v = y;
+      cube_index = 4;
+    } else {
+      u = -x;
+      v = y;
+      cube_index = 5;
+    }
+  }
+
+  // Get u, v into range [0, 1]
+  u = max(0, min(1, 0.5 * ((u / maxAxis) + 1.0)));
+  v = max(0, min(1, 0.5 * ((-v / maxAxis) + 1.0)));
+
+  // Now look up the texture colour
+  //printf("About to do lookup %d, u=%f, v=%f\n", cube_index, u, v);
+  texMap(map->cube[cube_index], u, v, &(col->R), &(col->G), &(col->B));
+  //printf("Done index %d\n", cube_index);
 }
 
 int main(int argc, char *argv[]) {
@@ -557,7 +621,6 @@ int main(int argc, char *argv[]) {
   // the direction or a ray
   struct ray3D *ray;             // Structure to keep the ray from e to a pixel
   struct colourRGB col;          // Return colour for raytraced pixels
-  struct colourRGB background;   // Background colour
   int j;                       // Counters for pixel coordinates
   unsigned char *rgbIm;
   int rgbArray[500][500][3];
@@ -598,6 +661,11 @@ int main(int argc, char *argv[]) {
   // image, so that ray tracing each row can be done in parallel (and still be
   // thread safe).
   erand48_state = (unsigned short*)calloc(sx*3, sizeof(unsigned short));
+
+  // Load the environment map
+  env = (struct environment_map*)calloc(1, sizeof(struct environment_map));
+  loadEnvironmentMap(env, "chapel/face");
+  //env = NULL;
   
   ///////////////////////////////////////////////////
   // TO DO: You will need to implement several of the
@@ -686,6 +754,7 @@ int main(int argc, char *argv[]) {
   // For each of the pixels in the image
   #pragma omp parallel for
   for (j=0;j<sx;j++) {
+    unsigned short* random_state = erand48_state+(3*j);
     fprintf(stderr,"%d/%d, ",j,sx);
     for (int i=0;i<sx;i++) {
       ///////////////////////////////////////////////////////////////////
@@ -695,7 +764,7 @@ int main(int argc, char *argv[]) {
 
       struct colourRGB col;
       if (!antialiasing) {
-      	launchRay(cam, du, dv, i + 0.5, j + 0.5, &background, &col, erand48_state+(3*j));
+      	launchRay(cam, du, dv, i + 0.5, j + 0.5, &col, random_state);
       } else {
       	int numSteps = 10;
       	// Divide this pixel into a grid of numSteps x numSteps, and fire a ray
@@ -708,9 +777,9 @@ int main(int argc, char *argv[]) {
       	    struct colourRGB current_col;
       	    // Choose a point randomly from inside the grid cell, to avoid moire
       	    // patterns
-      	    double new_i = i + (ii + 0.5)/numSteps;
-      	    double new_j = j + (jj + 0.5)/numSteps;
-      	    launchRay(cam, du, dv, new_i, new_j, &background, &current_col, erand48_state+(3*j));
+      	    double new_i = i + (ii + erand48(random_state))/numSteps;
+	    double new_j = j + (jj + erand48(random_state))/numSteps;
+      	    launchRay(cam, du, dv, new_i, new_j, &current_col, random_state);
       	    //current_col.R = 1;
       	    //current_col.G = 0;
       	    //current_col.B = 0;
