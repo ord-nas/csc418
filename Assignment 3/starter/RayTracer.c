@@ -137,15 +137,15 @@ void buildScene(void) {
   insertObject(o,&object_list);                  // Insert into object list
 
   // Let's add a couple spheres
-  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,30,0.2);
+  o=newHemisphere(.05,.95,.35,.35,1,.25,.25,1,1,30,0.2);
   //loadTexture(o, "smarties.ppm");
   Scale(o,.75,.5,1.5);
-  RotateY(o,PI/2);
+  RotateY(o,PI/3);
   Translate(o,-1.45,1.1,3.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,30,0.2);
+  o=newHemisphere(.05,.95,.95,.75,.75,.95,.55,1,1,30,0.2);
   //loadTexture(o, "smarties.ppm");
   Scale(o,.5,2.0,1.0);
   RotateZ(o,PI/1.5);

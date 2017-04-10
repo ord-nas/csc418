@@ -136,6 +136,42 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
   return(sphere);
 }
 
+struct object3D *newHemisphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny, double rough) {
+  // Intialize a new hemisphere with the specified parameters:
+  // ra, rd, rs, rg - Albedos for the components of the Phong model
+  // r, g, b, - Colour for this plane
+  // alpha - Transparency, must be set to 1 unless you are doing refraction
+  // r_index - Refraction index if you are doing refraction.
+  // shiny -Exponent for the specular component of the Phong model
+  //
+  // This is assumed to represent a unit hemisphere centered at the origin.
+  //
+
+  struct object3D *hemisphere=(struct object3D *)calloc(1,sizeof(struct object3D));
+
+  if (!hemisphere) fprintf(stderr,"Unable to allocate new hemisphere, out of memory!\n");
+  else {
+    hemisphere->alb.ra=ra;
+    hemisphere->alb.rd=rd;
+    hemisphere->alb.rs=rs;
+    hemisphere->alb.rg=rg;
+    hemisphere->col.R=r;
+    hemisphere->col.G=g;
+    hemisphere->col.B=b;
+    hemisphere->alpha=alpha;
+    hemisphere->r_index=r_index;
+    hemisphere->shinyness=shiny;
+    hemisphere->roughness=rough;
+    hemisphere->intersect=&hemisphereIntersect;
+    hemisphere->texImg=NULL;
+    memcpy(&hemisphere->T[0][0],&eye4x4[0][0],16*sizeof(double));
+    memcpy(&hemisphere->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
+    hemisphere->textureMap=&texMap;
+    hemisphere->frontAndBack=0;
+  }
+  return(hemisphere);
+}
+
 struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny, double rough) {
   // Intialize a new cylinder with the specified parameters:
   // ra, rd, rs, rg - Albedos for the components of the Phong model
@@ -335,9 +371,9 @@ void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lam
   *b = 0;
 }
 
-void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
-  // Computes and returns the value of 'lambda' at the intersection
-  // between the specified ray and the specified canonical sphere.
+void sphereOrHemisphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b, bool isHemisphere) {
+  // Computes and returns the value of 'lambda' at the intersection between the
+  // specified ray and the specified canonical sphere (or hemisphere)
 
   /////////////////////////////////
   // TO DO: Complete this function.
@@ -353,9 +389,9 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
     // One or two solutions. Find the smallest positive solution.
     double lambda1 = (-B - sqrt(discriminant))/(2*A);
     double lambda2 = (-B + sqrt(discriminant))/(2*A);
-    if (lambda1 > 0) {
+    if (lambda1 > 0 && (!isHemisphere || ray->p0.pz + lambda1 * ray->d.pz > 0)) {
       *lambda = lambda1;
-    } else if (lambda2 > 0) {
+    } else if (lambda2 > 0 && (!isHemisphere || ray->p0.pz + lambda2 * ray->d.pz > 0)) {
       *lambda = lambda2;
     } else {
       *lambda = -1;
@@ -382,6 +418,23 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
     *a = max(0, min(1, atan2(p->py, p->px) / (2*PI) + 0.5));
     *b = max(0, min(1, atan2(sqrt(p->px*p->px + p->py*p->py), p->pz) / PI));
   }
+}
+
+void sphereIntersect(struct object3D *hemisphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
+  // Computes and returns the value of 'lambda' at the intersection
+  // between the specified ray and the specified canonical sphere.
+
+  bool isHemisphere = false;
+  sphereOrHemisphereIntersect(hemisphere, ray, lambda, p, n, a, b, isHemisphere);
+}
+
+void hemisphereIntersect(struct object3D *hemisphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b) {
+  // Computes and returns the value of 'lambda' at the intersection between the
+  // specified ray and the specified canonical hemisphere (which is like the
+  // canonical sphere, but only the half that is above z=0).
+
+  bool isHemisphere = true;
+  sphereOrHemisphereIntersect(hemisphere, ray, lambda, p, n, a, b, isHemisphere);
 }
 
 void loadTexture(struct object3D *o, const char *filename) {
