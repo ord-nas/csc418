@@ -28,7 +28,9 @@ struct pointLS *light_list;
 int MAX_DEPTH;
 struct colourRGB background;   // Background colour
 struct environment_map* env;
-
+bool assign3 = true;
+bool basic_lighting = false;
+bool do_spectral = true;
 
 double min(double a, double b) {
   if (a < b) {
@@ -73,6 +75,92 @@ void insertAreaLS(struct object3D *plane, double r, double g, double b, double r
   }
 }
 
+void buildAssignment3Scene(void)
+{
+ // Sets up all objects in the scene. This involves creating each object,
+ // defining the transformations needed to shape and position it as
+ // desired, specifying the reflectance properties (albedos and colours)
+ // and setting up textures where needed.
+ // Light sources must be defined, positioned, and their colour defined.
+ // All objects must be inserted in the object_list. All light sources
+ // must be inserted in the light_list.
+ //
+ // To create hierarchical objects:
+ //   Copy the transform matrix from the parent node to the child, and
+ //   apply any required transformations afterwards.
+ //
+ // NOTE: After setting up the transformations for each object, don't
+ //       forget to set up the inverse transform matrix!
+
+ struct object3D *o;
+ struct pointLS *l;
+ struct point3D p;
+
+ ///////////////////////////////////////
+ // TO DO: For Assignment 3 you have to use
+ //        the simple scene provided
+ //        here, but for Assignment 4 you
+ //        *MUST* define your own scene.
+ //        Part of your mark will depend
+ //        on how nice a scene you
+ //        create. Use the simple scene
+ //        provided as a sample of how to
+ //        define and position objects.
+ ///////////////////////////////////////
+
+ // Simple scene for Assignment 3:
+ // Insert a couple of objects. A plane and two spheres
+ // with some transformations.
+
+ // Let's add a plane
+ // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
+ o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);	// Note the plane is highly-reflective (rs=rg=.75) so we
+						// should see some reflections if all is done properly.
+						// Colour is close to cyan, and currently the plane is
+						// completely opaque (alpha=1). The refraction index is
+						// meaningless since alpha=1
+ Scale(o,6,6,1);				// Do a few transforms...
+ RotateZ(o,PI/1.20);
+ RotateX(o,PI/2.25);
+ Translate(o,0,-3,10);
+ invert(&o->T[0][0],&o->Tinv[0][0]);		// Very important! compute
+						// and store the inverse
+						// transform for this object!
+ insertObject(o,&object_list);			// Insert into object list
+
+ // Let's add a couple spheres
+ o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,6,0);
+ Scale(o,.75,.5,1.5);
+ RotateY(o,PI/2);
+ Translate(o,-1.45,1.1,3.5);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
+
+ o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,6,0);
+ Scale(o,.5,2.0,1.0);
+ RotateZ(o,PI/1.5);
+ Translate(o,1.75,1.25,5.0);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
+
+ // Insert a single point light source.
+ p.px=0;
+ p.py=15.5;
+ p.pz=-5.5;
+ p.pw=1;
+ l=newPLS(&p,.95,.95,.95);
+ insertPLS(l,&light_list);
+
+ // End of simple scene for Assignment 3
+ // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
+ // or, you can create code to handle arbitrary triangles and then define objects as surface meshes.
+ //
+ // Remember: A lot of the quality of your scene will depend on how much care you have put into defining
+ //           the relflectance properties of your objects, and the number and type of light sources
+ //           in the scene.
+}
+
+
 void buildScene(void) {
   // Sets up all objects in the scene. This involves creating each object,
   // defining the transformations needed to shape and position it as
@@ -109,27 +197,11 @@ void buildScene(void) {
   // Insert a couple of objects. A plane and two spheres
   // with some transformations.
 
-  // Let's add a plane
-  // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
+  // TABLE SURFACE
+  
   o=newPlane(.05,.75,.05,.75,.69,0.41,0.11,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
   loadTexture(o, "marble.ppm");
-  //o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
-  //loadTexture(o, "smarties.ppm");
-  /* double r, g, b; */
-  /* texMap(o->texImg, 0, 0, &r, &g, &b); */
-  /* printf("0 0 -> %f %f %f\n", r, g, b); */
-  /* texMap(o->texImg, 0, 1, &r, &g, &b); */
-  /* printf("0 1 -> %f %f %f\n", r, g, b); */
-  /* texMap(o->texImg, 1, 0, &r, &g, &b); */
-  /* printf("1 0 -> %f %f %f\n", r, g, b); */
-  /* texMap(o->texImg, .999, .999, &r, &g, &b); */
-  /* printf("1 1 -> %f %f %f\n", r, g, b); */
-  // should see some reflections if all is done properly.
-  // Colour is close to cyan, and currently the plane is
-  // completely opaque (alpha=1). The refraction index is
-  // meaningless since alpha=1
   Scale(o,6,6,1);                                // Do a few transforms...
-  //RotateZ(o,PI/1.20);
   RotateX(o,PI/2);
   Translate(o,0,-2,10);
   invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
@@ -137,25 +209,11 @@ void buildScene(void) {
   // transform for this object!
   insertObject(o,&object_list);                  // Insert into object list
 
+  // TABLE PLANE
+  
   o=newPlane(.05,.75,.05,.75,.69,0.41,0.11,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
   loadTexture(o, "marble.ppm");
-  //o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
-  //loadTexture(o, "smarties.ppm");
-  /* double r, g, b; */
-  /* texMap(o->texImg, 0, 0, &r, &g, &b); */
-  /* printf("0 0 -> %f %f %f\n", r, g, b); */
-  /* texMap(o->texImg, 0, 1, &r, &g, &b); */
-  /* printf("0 1 -> %f %f %f\n", r, g, b); */
-  /* texMap(o->texImg, 1, 0, &r, &g, &b); */
-  /* printf("1 0 -> %f %f %f\n", r, g, b); */
-  /* texMap(o->texImg, .999, .999, &r, &g, &b); */
-  /* printf("1 1 -> %f %f %f\n", r, g, b); */
-  // should see some reflections if all is done properly.
-  // Colour is close to cyan, and currently the plane is
-  // completely opaque (alpha=1). The refraction index is
-  // meaningless since alpha=1
   Scale(o,6,0.2,0.2);                                // Do a few transforms...
-  //RotateZ(o,PI/1.20);
   Translate(o,0,-3.2,3.8);
   invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
   // and store the inverse
@@ -200,6 +258,8 @@ void buildScene(void) {
   // transform for this object!
   insertObject(o,&object_list);                  // Insert into object list
 
+  // FRUIT BOWL
+  
   // Let's add a couple spheres
   o=newHemisphere(.05,.95,.35,.55,1,.25,.25,1,1,30,0.2);
   //loadTexture(o, "smarties.ppm");
@@ -209,11 +269,7 @@ void buildScene(void) {
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  /* makeGrape(-3,-1.5,7); */
-  /* makeGrape(-2.5,-1.2,7); */
-  /* makeGrape(-2.1,-1,7); */
-  /* makeGrape(-1.5,-1.2,7); */
-  /* makeGrape(-1.1,-1.1,7); */
+  // FRUITS
 
   o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
   loadTexture(o, "watermelon.ppm");
@@ -289,23 +345,15 @@ void buildScene(void) {
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
   
-  // Insert a single point light source.
-  p.px=0;
-  p.py=15.5;
-  p.pz=-5.5;
-  p.pw=1;
-  l=newPLS(&p,.95,.95,.95);
-  insertPLS(l,&light_list);
-  
   // Insert an area light source. Note this plane is just for defining the area
   // light source, so its material properties don't matter.
-  /* o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); */
-  /* Scale(o,2,2,1); */
-  /* RotateZ(o,PI/1.20); */
-  /* RotateX(o,PI/2.25); */
-  /* Translate(o,0,15.5,-5.5); */
-  /* insertAreaLS(o, .95, .95, .95, 20, 20, &light_list); */
-  /* free(o); */
+  o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  Scale(o,2,2,1);
+  RotateZ(o,PI/1.20);
+  RotateX(o,PI/2.25);
+  Translate(o,0,15.5,-5.5);
+  insertAreaLS(o, .95, .95, .95, 8, 8, &light_list);
+  free(o);
 
   // End of simple scene for Assignment 3
   // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
@@ -377,15 +425,17 @@ void phongShade(struct object3D *obj, struct point3D *p, struct point3D *n, stru
       tmp_col->B += diffuse_coefficient * B * light->col.B;
     
       // Specular lighting
-      struct point3D r;
-      r.px = -s.px + 2*n_dot_s*current_n.px;
-      r.py = -s.py + 2*n_dot_s*current_n.py;
-      r.pz = -s.pz + 2*n_dot_s*current_n.pz;
-      r.pw = 0.0;
-      double specular_coefficient = obj->alb.rs * max(0, pow(dot(&r, &b), obj->shinyness));
-      tmp_col->R += specular_coefficient * light->col.R;
-      tmp_col->G += specular_coefficient * light->col.G;
-      tmp_col->B += specular_coefficient * light->col.B;
+      if (do_spectral) {
+	struct point3D r;
+	r.px = -s.px + 2*n_dot_s*current_n.px;
+	r.py = -s.py + 2*n_dot_s*current_n.py;
+	r.pz = -s.pz + 2*n_dot_s*current_n.pz;
+	r.pw = 0.0;
+	double specular_coefficient = obj->alb.rs * max(0, pow(dot(&r, &b), obj->shinyness));
+	tmp_col->R += specular_coefficient * light->col.R;
+	tmp_col->G += specular_coefficient * light->col.G;
+	tmp_col->B += specular_coefficient * light->col.B;
+      }
     }
     
     light = light->next;
@@ -468,6 +518,13 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   struct colourRGB tmp_col;      // Accumulator for colour components
   double R,G,B;                  // Colour for the object in R G and B
 
+  if (basic_lighting) {
+    col->R = obj->col.R;
+    col->G = obj->col.G;
+    col->B = obj->col.B;
+    return;
+  }
+
   // This will hold the colour as we process all the components of
   // the Phong illumination model
   tmp_col.R=0;
@@ -496,7 +553,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   // Do global illumination (currently just reflection)
   globalShade(obj, p, n, ray, depth, R, G, B, &tmp_col, random_state);
 
-  *col = tmp_col;  
+  *col = tmp_col;
   return;
 
 }
@@ -790,9 +847,12 @@ int main(int argc, char *argv[]) {
   erand48_state = (unsigned short*)calloc(sx*3, sizeof(unsigned short));
 
   // Load the environment map
-  env = (struct environment_map*)calloc(1, sizeof(struct environment_map));
-  loadEnvironmentMap(env, "chapel/face");
-  //env = NULL;
+  if (assign3) {
+    env = NULL;
+  } else {
+    env = (struct environment_map*)calloc(1, sizeof(struct environment_map));
+    loadEnvironmentMap(env, "chapel/face");
+  }
   
   ///////////////////////////////////////////////////
   // TO DO: You will need to implement several of the
@@ -801,8 +861,12 @@ int main(int argc, char *argv[]) {
   //        for Assignment 4 you need to create your own
   //        *interesting* scene.
   ///////////////////////////////////////////////////
-  buildScene();          // Create a scene. This defines all the
-                         // objects in the world of the raytracer
+  if (assign3) {
+    buildAssignment3Scene();
+  } else {
+    buildScene();          // Create a scene. This defines all the
+                           // objects in the world of the raytracer
+  }
 
   //////////////////////////////////////////
   // TO DO: For Assignment 3 you can use the setup
@@ -825,11 +889,18 @@ int main(int argc, char *argv[]) {
   // To define the gaze vector, we choose a point 'pc' in the scene that
   // the camera is looking at, and do the vector subtraction pc-e.
   // Here we set up the camera to be looking at the origin, so g=(0,0,0)-(0,0,-1)
-  g.px=0;
-  g.py=-0.2;
-  g.pz=1;
-  g.pw=1;
-
+  if (assign3) {
+    g.px=0;
+    g.py=0;
+    g.pz=1;
+    g.pw=1;
+  } else {
+    g.px=0;
+    g.py=-0.2;
+    g.pz=1;
+    g.pw=1;
+  }
+  
   // Define the 'up' vector to be the Y axis
   up.px=0;
   up.py=1;

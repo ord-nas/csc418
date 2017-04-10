@@ -15,14 +15,14 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded oth
 
    http://www.cs.brown.edu/~ls/teaching08.html
 
-   ___Yes   ___No
+   _X__Yes   ___No
 
 2. I understand that it is not okay to use code found online and represent it as my own work.
    Further, I understand that if caught with similarity software, I can be reprimanded by the
    department and will have to deal with the consequences of this.
 	
 
-   ___Yes   ___No
+   __X_Yes   ___No
 
    If you have used an external source, see 3 and report it there.
 
@@ -30,7 +30,7 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded oth
    source (the penalties/grades will be assessed according to the policy stated in 
    http://www.cs.brown.edu/~ls/teaching08.html)
 
-   ___Yes   ___No
+   ___Yes   _X__No
 
 
    If you checked yes, please supply the following
@@ -51,23 +51,23 @@ B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FUL
    WE WILL BE ABLE TO MAKE AN ACCURATE ASSESSMENT
 
 				Completed   Partial   Not done   Mark
-[10 marks]  Ray Casting
+[10 marks]  Ray Casting             X
 
-[15 marks]  Intersection	
+[15 marks]  Intersection	    X
             for spheres
 
-[15 marks]  Intersection
+[15 marks]  Intersection            X
 	    for square
 
-[15 marks]  Normal transforms
+[15 marks]  Normal transforms       X
 
-[15 marks]  Local Phong
+[15 marks]  Local Phong             X
 
-[10 marks]  Shadows
+[10 marks]  Shadows                 X
 
-[15 marks]  Global reflection
+[15 marks]  Global reflection       X
 
-[5 marks]   Report
+[5 marks]   Report                  X
 
 [TA assigned]  Penalty marks
 
