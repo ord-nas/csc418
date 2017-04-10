@@ -111,7 +111,8 @@ void buildScene(void) {
 
   // Let's add a plane
   // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
-  o=newPlane(.05,.05,.05,.75,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  o=newPlane(.05,.75,.05,.75,.69,0.41,0.11,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  loadTexture(o, "marble.ppm");
   //o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
   //loadTexture(o, "smarties.ppm");
   /* double r, g, b; */
@@ -128,38 +129,166 @@ void buildScene(void) {
   // completely opaque (alpha=1). The refraction index is
   // meaningless since alpha=1
   Scale(o,6,6,1);                                // Do a few transforms...
-  RotateZ(o,PI/1.20);
-  RotateX(o,PI/2.25);
-  Translate(o,0,-3,10);
+  //RotateZ(o,PI/1.20);
+  RotateX(o,PI/2);
+  Translate(o,0,-2,10);
+  invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
+  // and store the inverse
+  // transform for this object!
+  insertObject(o,&object_list);                  // Insert into object list
+
+  o=newPlane(.05,.75,.05,.75,.69,0.41,0.11,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  loadTexture(o, "marble.ppm");
+  //o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2,0);  // Note the plane is highly-reflective (rs=rg=.75) so we
+  //loadTexture(o, "smarties.ppm");
+  /* double r, g, b; */
+  /* texMap(o->texImg, 0, 0, &r, &g, &b); */
+  /* printf("0 0 -> %f %f %f\n", r, g, b); */
+  /* texMap(o->texImg, 0, 1, &r, &g, &b); */
+  /* printf("0 1 -> %f %f %f\n", r, g, b); */
+  /* texMap(o->texImg, 1, 0, &r, &g, &b); */
+  /* printf("1 0 -> %f %f %f\n", r, g, b); */
+  /* texMap(o->texImg, .999, .999, &r, &g, &b); */
+  /* printf("1 1 -> %f %f %f\n", r, g, b); */
+  // should see some reflections if all is done properly.
+  // Colour is close to cyan, and currently the plane is
+  // completely opaque (alpha=1). The refraction index is
+  // meaningless since alpha=1
+  Scale(o,6,0.2,0.2);                                // Do a few transforms...
+  //RotateZ(o,PI/1.20);
+  Translate(o,0,-3.2,3.8);
+  invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
+  // and store the inverse
+  // transform for this object!
+  insertObject(o,&object_list);                  // Insert into object list
+
+  // TABLE LEGS
+  
+  o=newCylinder(.05,.05,.05,.75,.55,.8,.75,1,1,2,0);
+  Scale(o,0.3,0.3,8);
+  RotateX(o,PI/2);
+  Translate(o,5.5,-3.1,14);
+  invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
+  // and store the inverse
+  // transform for this object!
+  insertObject(o,&object_list);                  // Insert into object list
+
+  o=newCylinder(.05,.05,.05,.75,.55,.8,.75,1,1,2,0);
+  Scale(o,0.3,0.3,8);
+  RotateX(o,PI/2);
+  Translate(o,-5.5,-3.1,14);
+  invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
+  // and store the inverse
+  // transform for this object!
+  insertObject(o,&object_list);                  // Insert into object list
+
+  o=newCylinder(.05,.05,.05,.75,.55,.8,.75,1,1,2,0);
+  Scale(o,0.3,0.3,8);
+  RotateX(o,PI/2);
+  Translate(o,5.5,-3.1,6);
+  invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
+  // and store the inverse
+  // transform for this object!
+  insertObject(o,&object_list);                  // Insert into object list
+
+  o=newCylinder(.05,.05,.05,.75,.55,.8,.75,1,1,2,0);
+  Scale(o,0.3,0.3,8);
+  RotateX(o,PI/2);
+  Translate(o,-5.5,-3.1,6);
   invert(&o->T[0][0],&o->Tinv[0][0]);            // Very important! compute
   // and store the inverse
   // transform for this object!
   insertObject(o,&object_list);                  // Insert into object list
 
   // Let's add a couple spheres
-  o=newHemisphere(.05,.95,.35,.35,1,.25,.25,1,1,30,0.2);
+  o=newHemisphere(.05,.95,.35,.55,1,.25,.25,1,1,30,0.2);
   //loadTexture(o, "smarties.ppm");
-  Scale(o,.75,.5,1.5);
-  RotateY(o,PI/3);
-  Translate(o,-1.45,1.1,3.5);
+  Scale(o,3,3,1.5);
+  RotateX(o,PI/2);
+  Translate(o,-3,-1.5,7);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newHemisphere(.05,.95,.95,.75,.75,.95,.55,1,1,30,0.2);
-  //loadTexture(o, "smarties.ppm");
-  Scale(o,.5,2.0,1.0);
-  RotateZ(o,PI/1.5);
-  Translate(o,1.75,1.25,5.0);
+  /* makeGrape(-3,-1.5,7); */
+  /* makeGrape(-2.5,-1.2,7); */
+  /* makeGrape(-2.1,-1,7); */
+  /* makeGrape(-1.5,-1.2,7); */
+  /* makeGrape(-1.1,-1.1,7); */
+
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "watermelon.ppm");
+  Scale(o,1.3,1.3,1.8);
+  RotateX(o,3*PI/2);
+  RotateZ(o,PI/2-0.2);
+  Translate(o,-4.8,-1.5,7.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
-  o=newCylinder(.05,.95,.95,.4,.95,.95,0,1,1,30,0);
-  RotateZ(o,PI/1.5);
-  RotateX(o,-PI/1.2);
-  Translate(o,1.75,-1.5,10.0);
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "red_apple.ppm");
+  Scale(o,0.6,0.6,0.6);
+  RotateX(o,3*PI/2-0.2);
+  Translate(o,-4,-1.5,6.2);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
+  o=newSphere(.05,.95,0.0,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "orange2.ppm");
+  Scale(o,0.6,0.6,0.6);
+  Translate(o,-3,-1.8,7);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "green_apple.ppm");
+  Scale(o,0.6,0.6,0.6);
+  RotateX(o,3*PI/2-0.4);
+  Translate(o,-2.5,-2,8);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "red_apple.ppm");
+  Scale(o,0.6,0.6,0.6);
+  RotateX(o,3*PI/2-0.2);
+  RotateZ(o,0.3);
+  Translate(o,-3,-1.5,9);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+  
+  o=newSphere(.05,.95,0.0,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "orange2.ppm");
+  Scale(o,0.6,0.6,0.6);
+  Translate(o,-1.5,-2,7.5);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "green_apple.ppm");
+  Scale(o,0.6,0.6,0.6);
+  RotateX(o,3*PI/2-0.4);
+  Translate(o,-1.8,-1.75,9);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "red_apple.ppm");
+  Scale(o,0.6,0.6,0.6);
+  RotateX(o,3*PI/2-0.2);
+  RotateZ(o,0.3);
+  Translate(o,-1,-1.8,7);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  o=newSphere(.05,.95,.95,0.0,0.90,0.26,0.96,1,1,30,0.2);
+  loadTexture(o, "red_apple.ppm");
+  Scale(o,0.6,0.6,0.6);
+  RotateX(o,3*PI/2-0.2);
+  RotateZ(o,0.3);
+  Translate(o,-0.7,-1.5,8.2);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+  
   // Insert a single point light source.
   p.px=0;
   p.py=15.5;
@@ -168,11 +297,9 @@ void buildScene(void) {
   l=newPLS(&p,.95,.95,.95);
   insertPLS(l,&light_list);
   
-  /* // Insert an area light source. */
-  /* o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);  // Note this plane is just for */
-  /* 					     // defining the area light source, */
-  /* 					     // so its material properties don't */
-  /* 					     // matter. */
+  // Insert an area light source. Note this plane is just for defining the area
+  // light source, so its material properties don't matter.
+  /* o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); */
   /* Scale(o,2,2,1); */
   /* RotateZ(o,PI/1.20); */
   /* RotateX(o,PI/2.25); */
@@ -699,7 +826,7 @@ int main(int argc, char *argv[]) {
   // the camera is looking at, and do the vector subtraction pc-e.
   // Here we set up the camera to be looking at the origin, so g=(0,0,0)-(0,0,-1)
   g.px=0;
-  g.py=0;
+  g.py=-0.2;
   g.pz=1;
   g.pw=1;
 
