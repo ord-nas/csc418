@@ -117,6 +117,7 @@ struct object3D {
   double  roughness;      // Reflection roughness/glossiness
   int     frontAndBack;   // Flag to indicate that both sides of the object
                           // should be lit.
+  int     isAreaLight;
   struct object3D *next;  // Pointer to next entry in object linked list
 };
 
@@ -156,14 +157,13 @@ int main(int argc, char *argv[]);                                               
 double min(double a, double b);
 void buildScene(void);                                                                                  // Scene set up. Defines objects and object transformations
 void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os, unsigned short* random_state);
-void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b);
+void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, bool ignore_area_light = false);
 void globalShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double R, double G, double B, struct colourRGB *tmp_col, unsigned short* random_state);
 void phongShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, double R, double G, double B, struct colourRGB *tmp_col);
 void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a_tex, double b_tex, struct colourRGB *col, unsigned short* random_state);
 bool invert3x3Mat(float mat[3][3]);
 bool inShadow(struct object3D *obj, struct point3d* p, struct pointLS* light);
 void launchRay(struct view* cam, double du, double dv, double i, double j, struct colourRGB* col, unsigned short* random_state);
-void insertAreaLS(struct object3D *plane, double r, double g, double b, double rows, double cols, struct PointLS **light_list);
 void loadEnvironmentMap(struct environment_map *map, const char *filename);
 void getEnvironmentColour(struct environment_map *map, struct ray3D *ray, struct colourRGB *col);
 

@@ -28,7 +28,7 @@ struct pointLS *light_list;
 int MAX_DEPTH;
 struct colourRGB background;   // Background colour
 struct environment_map* env;
-bool assign3 = true;
+bool assign3 = false;
 bool basic_lighting = false;
 bool do_spectral = true;
 
@@ -37,41 +37,6 @@ double min(double a, double b) {
     return a;
   } else {
     return b;
-  }
-}
-
-void insertAreaLS(struct object3D *plane, double r, double g, double b, double rows, double cols, struct pointLS **light_list) {
-  // Simulate an area light source by representing it as a grid of point light
-  // sources. Uses the given plane object as the surface to cover with
-  // lights. Inserts all resulting point sources into the given light_list. Uses
-  // the given number of rows and cols of point sources.
-
-  // Divide r, g, b values by the number of point sources, so that the *overall*
-  // intensity of the area light source is as expected.
-  double numPLS = rows * cols;
-  r /= numPLS;
-  g /= numPLS;
-  b /= numPLS;
-  
-  // Strategy: initially create the point sources on the canonical plane, and
-  // then transform them to their proper spot by using the plane equation.
-  struct point3D p;
-  for (int row = 0; row < rows; ++row) {
-    for (int col = 0; col < cols; ++col) {
-      // Canonical plane has points between -1 and 1 on the x and y axes, and 0
-      // on the z axis.
-      p.px = col / (cols - 1.0) * 2.0 - 1.0;
-      p.py = row / (rows - 1.0) * 2.0 - 1.0;
-      p.pz = 0;
-      p.pw = 1;
-      // Transform p using the plane transformation
-      matVecMult(plane->T, &p);
-      // Now create and insert a point light source
-      struct pointLS *l = newPLS(&p, r, g, b);
-      printf("Inserting light source with colour: %f %f %f\n",
-	     l->col.R, l->col.G, l->col.B);
-      insertPLS(l, light_list);
-    }
   }
 }
 
@@ -345,23 +310,8 @@ void buildScene(void) {
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
   
-  // Insert an area light source. Note this plane is just for defining the area
-  // light source, so its material properties don't matter.
-  o=newPlane(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  Scale(o,2,2,1);
-  RotateZ(o,PI/1.20);
-  RotateX(o,PI/2.25);
-  Translate(o,0,15.5,-5.5);
-  insertAreaLS(o, .95, .95, .95, 8, 8, &light_list);
-  free(o);
-
-  // End of simple scene for Assignment 3
-  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
-  // or, you can create code to handle arbitrary triangles and then define objects as surface meshes.
-  //
-  // Remember: A lot of the quality of your scene will depend on how much care you have put into defining
-  //           the relflectance properties of your objects, and the number and type of light sources
-  //           in the scene.
+  // Insert an area light source.
+  addAreaLight(4, 4, 0, -0.984808, 0.173648, 0, 15.5, -5.5, 8, 8, .95, .95, .95, &object_list, &light_list);
 }
 
 bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
@@ -378,7 +328,8 @@ bool inShadow(struct object3D *obj, struct point3D* p, struct pointLS* light) {
   double lambda, unused_a, unused_b;
   struct object3D *unused_object;
   struct point3D unused_p, unused_n;
-  findFirstHit(ray, &lambda, obj, &unused_object, &unused_p, &unused_n, &unused_a, &unused_b);
+  bool ignore_area_light = true;
+  findFirstHit(ray, &lambda, obj, &unused_object, &unused_p, &unused_n, &unused_a, &unused_b, ignore_area_light);
   free(ray);
   // lambda < 0 means ray didn't interset anything (no shadow)
   // lambda > 1 means intersection happened *after* the light source (no shadow)
@@ -558,7 +509,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 
 }
 
-void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b) {
+void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, bool ignore_area_light) {
   // Find the closest intersection between the ray and any objects in the scene.
   // It returns:
   //   - The lambda at the intersection (or < 0 if no intersection)
@@ -581,6 +532,11 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   while (current != NULL) {
     if (current == Os) {
       // Ignore the source object!
+      current = current->next;
+      continue;
+    }
+    if (ignore_area_light && current->isAreaLight) {
+      // Ignore area lights!
       current = current->next;
       continue;
     }

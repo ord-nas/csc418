@@ -96,6 +96,7 @@ struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, 
     memcpy(&plane->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     plane->textureMap=&texMap;
     plane->frontAndBack=1;
+    plane->isAreaLight=0;
   }
   return(plane);
 }
@@ -132,6 +133,7 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
     memcpy(&sphere->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     sphere->textureMap=&texMap;
     sphere->frontAndBack=0;
+    sphere->isAreaLight=0;
   }
   return(sphere);
 }
@@ -168,6 +170,7 @@ struct object3D *newHemisphere(double ra, double rd, double rs, double rg, doubl
     memcpy(&hemisphere->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     hemisphere->textureMap=&texMap;
     hemisphere->frontAndBack=0;
+    hemisphere->isAreaLight=0;
   }
   return(hemisphere);
 }
@@ -201,6 +204,7 @@ struct object3D *newCylinder(double ra, double rd, double rs, double rg, double 
     memcpy(&cylinder->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
     cylinder->textureMap=&texMap;
     cylinder->frontAndBack=0;
+    cylinder->isAreaLight=0;
   }
   return(cylinder);
 }
@@ -218,8 +222,6 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
   /////////////////////////////////
   // TO DO: Complete this function.
   /////////////////////////////////
-  
-  // TODO THIS INTERSECT FUNCTION CAN BE MUCH SIMPLER!
   
   // The plane is defined by the following vertices (CCW)
   // (1,1,0), (-1,1,0), (-1,-1,0), (1,-1,0)
@@ -565,6 +567,45 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   // Implement this function to enable area light sources
   /////////////////////////////////////////////////////
 
+  // Divide r, g, b values by the number of point sources, so that the *overall*
+  // intensity of the area light source is as expected.
+  double numPLS = lx * ly;
+  r /= numPLS;
+  g /= numPLS;
+  b /= numPLS;
+  
+  // First create the plane
+  struct object3D* plane = newPlane(1.0, 0, 0, 0, r, g, b, 1, 1, 0, 0);
+  plane->isAreaLight = 1;
+  Scale(plane, sx/2, sy/2, 1);
+  double rho = sqrt(nx*nx + ny*ny + nz*nz);
+  double phi = acos(ny/rho);
+  double theta = atan2(nx, nz);
+  RotateX(plane, phi-PI/2);
+  RotateY(plane, theta);
+  Translate(plane,tx,ty,tz);
+  invert(&plane->T[0][0],&plane->Tinv[0][0]);
+  insertObject(plane,o_list);
+  
+  // Now create the light sources. Strategy: initially create the point sources
+  // on the canonical plane, and then transform them to their proper spot by
+  // using the plane equation.
+  struct point3D p;
+  for (int row = 0; row < ly; ++row) {
+    for (int col = 0; col < lx; ++col) {
+      // Canonical plane has points between -1 and 1 on the x and y axes, and 0
+      // on the z axis.
+      p.px = col / (lx - 1.0) * 2.0 - 1.0;
+      p.py = row / (ly - 1.0) * 2.0 - 1.0;
+      p.pz = 0;
+      p.pw = 1;
+      // Transform p using the plane transformation
+      matVecMult(plane->T, &p);
+      // Now create and insert a point light source
+      struct pointLS *l = newPLS(&p, r, g, b);
+      insertPLS(l, l_list);
+    }
+  }
 }
 
 ///////////////////////////////////
